@@ -45,6 +45,30 @@ static uint8_t *chnl_tbl;
 static uint32_t max_peripherals;
 static uint32_t spmi_version = 0;
 
+/*
+ * Wait for a channel's STATUS register to become non-zero. A command that
+ * never completes (wrong channel, PMIC not answering) used to spin forever,
+ * freezing the firmware the first time something polled the PMIC (keys).
+ * Returns 0 on timeout.
+ */
+#define SPMI_TIMEOUT_US 10000
+
+static uint32_t spmi_wait_status(UINTN status_reg)
+{
+	uint32_t val;
+	uint32_t us;
+
+	for (us = 0; us < SPMI_TIMEOUT_US; us++) {
+		val = readl(status_reg);
+		if (val)
+			return val;
+		udelay(1);
+	}
+
+	dprintf(CRITICAL, "SPMI: command timed out (status reg 0x%lx)\n", status_reg);
+	return 0;
+}
+
 static void spmi_lookup_chnl_number(void)
 {
 	uint32_t i;
@@ -54,8 +78,18 @@ static void spmi_lookup_chnl_number(void)
 	uint32_t chnl_tbl_sz = BIT(12) * sizeof(uint8_t);
 
 	/* Allocate the channel table */
-	chnl_tbl = (uint8_t *) malloc(chnl_tbl_sz);
+	chnl_tbl = (uint8_t *) calloc(1, chnl_tbl_sz);
 	ASSERT(chnl_tbl);
+	if (chnl_tbl == NULL)
+		return;
+
+	/*
+	 * The ppid -> channel table is only readable with the v2 core
+	 * (PcdSpmiVersion 2). Otherwise leave it zeroed: every peripheral
+	 * goes through channel 0 with the slave/ppid in CMD0, as on v1.
+	 */
+	if (spmi_version != 2)
+		return;
 
 	for(i = 0; i < max_peripherals; i++)
 	{
@@ -92,6 +126,7 @@ int spmi_init(void)
 	/* Read the version numver */
 	pmic_arb_ver = readl(PMIC_ARB_SPMI_HW_VERSION);
 	max_peripherals = PcdGet64(PcdSpmiMaxPeripherals);
+	DEBUG((EFI_D_ERROR, "SPMI: PMIC arbiter version 0x%08x\n", pmic_arb_ver));
 
 	if (pmic_arb_ver < PMIC_ARB_V2)
 	{
@@ -158,7 +193,7 @@ long long unsigned int pmic_arb_write_cmd(struct pmic_arb_cmd *cmd,
 	 * For V1-HW we dont care for channel number & always
 	 * use '0'
 	 */
-	if (pmic_arb_ver >= PMIC_ARB_V2)
+	if (pmic_arb_ver >= PMIC_ARB_V2 && chnl_tbl != NULL)
 	{
 		pmic_arb_chnl_num = chnl_tbl[CHNL_IDX(cmd->slave_id, cmd->address)];
 	}
@@ -213,9 +248,9 @@ long long unsigned int pmic_arb_write_cmd(struct pmic_arb_cmd *cmd,
 
 	/* Wait till CMD DONE status */
 	if (spmi_version==2)
-		while (!(val = readl(PMICV2_ARB_CHNLn_STATUS(pmic_arb_chnl_num))));
+		val = spmi_wait_status(PMICV2_ARB_CHNLn_STATUS(pmic_arb_chnl_num));
 	else
-		while (!(val = readl(PMICV1_ARB_CHNLn_STATUS(pmic_arb_chnl_num))));
+		val = spmi_wait_status(PMICV1_ARB_CHNLn_STATUS(pmic_arb_chnl_num));
 
 	/* Check for errors */
 	error = val ^ (1 << PMIC_ARB_CMD_DONE);
@@ -279,7 +314,7 @@ long long unsigned int pmic_arb_read_cmd(struct pmic_arb_cmd *cmd,
 	 * For V1-HW we dont care for channel number & always
 	 * use '0'
 	 */
-	if (pmic_arb_ver >= PMIC_ARB_V2)
+	if (pmic_arb_ver >= PMIC_ARB_V2 && chnl_tbl != NULL)
 	{
 		pmic_arb_chnl_num = chnl_tbl[CHNL_IDX(cmd->slave_id, cmd->address)];
 	}
@@ -314,9 +349,9 @@ long long unsigned int pmic_arb_read_cmd(struct pmic_arb_cmd *cmd,
 
 	/* Wait till CMD DONE status */
 	if (spmi_version==2)
-		while (!(val = readl(PMICV2_ARB_OBS_CHNLn_STATUS(pmic_arb_chnl_num))));
+		val = spmi_wait_status(PMICV2_ARB_OBS_CHNLn_STATUS(pmic_arb_chnl_num));
 	else
-		while (!(val = readl(PMICV1_ARB_CHNLn_STATUS(pmic_arb_chnl_num))));
+		val = spmi_wait_status(PMICV1_ARB_CHNLn_STATUS(pmic_arb_chnl_num));
 
 	/* Check for errors */
 	error = val ^ (1 << PMIC_ARB_CMD_DONE);

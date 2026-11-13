@@ -195,6 +195,8 @@ KeypadControllerDriverStart(
   KEYPAD_DEVICE_PROTOCOL *KeypadDevice;
   KEYPAD_CONSOLE_IN_DEV * ConsoleIn;
 
+  DEBUG((EFI_D_ERROR, "Keypad: starting\n"));
+
   //
   // Get the KeyPad Protocol on Controller's handle
   //

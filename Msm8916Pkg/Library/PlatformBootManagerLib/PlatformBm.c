@@ -498,6 +498,7 @@ AddInputDevices(IN EFI_GUID *Protocol)
 **/
 VOID EFIAPI PlatformBootManagerBeforeConsole(VOID)
 {
+  DEBUG((EFI_D_ERROR, "BDS: before console\n"));
   //
   // Signal EndOfDxe PI Event
   //
@@ -544,6 +545,7 @@ VOID EFIAPI PlatformBootManagerBeforeConsole(VOID)
   //
   AddInputDevices(&gEFIDroidKeypadDeviceProtocolGuid);
   AddInputDevices(&gEfiSimpleTextInputExProtocolGuid);
+  DEBUG((EFI_D_ERROR, "BDS: ConIn/ConOut set up\n"));
 
   //
   // Add the hardcoded serial console device path to ConIn, ConOut, ErrOut.
@@ -562,6 +564,7 @@ VOID EFIAPI PlatformBootManagerBeforeConsole(VOID)
   // Register platform-specific boot options and keyboard shortcuts.
   //
   PlatformRegisterOptionsAndKeys();
+  DEBUG((EFI_D_ERROR, "BDS: connecting consoles\n"));
 }
 
 STATIC
@@ -633,6 +636,7 @@ VOID EFIAPI PlatformBootManagerAfterConsole(VOID)
   UINTN                         PosX;
   UINTN                         PosY;
 
+  DEBUG((EFI_D_ERROR, "BDS: console up\n"));
   FirmwareVerLength = StrLen(PcdGetPtr(PcdFirmwareVersionString));
 
   //
@@ -665,7 +669,9 @@ VOID EFIAPI PlatformBootManagerAfterConsole(VOID)
   //
   // Connect the rest of the devices.
   //
+  DEBUG((EFI_D_ERROR, "BDS: connecting all devices\n"));
   EfiBootManagerConnectAll();
+  DEBUG((EFI_D_ERROR, "BDS: devices connected\n"));
 
   //
   // On ARM, there is currently no reason to use the phased capsule
@@ -686,6 +692,7 @@ VOID EFIAPI PlatformBootManagerAfterConsole(VOID)
   //
   PlatformRegisterFvBootOption(
       &gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE);
+  DEBUG((EFI_D_ERROR, "BDS: boot options ready\n"));
 }
 
 /**

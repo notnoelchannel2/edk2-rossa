@@ -1,4 +1,5 @@
 #include <PiDxe.h>
+#include <Library/DebugLib.h>
 
 #include <Library/LKEnvLib.h>
 #include <Library/QcomPm8x41Lib.h>
@@ -41,6 +42,8 @@ STATIC KEY_CONTEXT_PRIVATE* KeyList[] = {
 };
 
 #define KEYPAD_GPIO_NONE  0xFFFFFFFF
+
+STATIC BOOLEAN mPonLogged = FALSE;
 
 STATIC
 VOID
@@ -175,12 +178,19 @@ EFI_STATUS KeypadDeviceImplGetKeys (KEYPAD_DEVICE_PROTOCOL *This, KEYPAD_RETURN_
       RC = gPm8x41->pm8x41_gpio_get(Context->Gpio, &GpioStatus);
     }
     else if (Context->DeviceType == KEY_DEVICE_TYPE_PM8X41_PON) {
+      if (!mPonLogged) {
+        DEBUG((EFI_D_ERROR, "Keypad: first PMIC key read\n"));
+      }
       if (Context->PonType == 0x1)
         GpioStatus = gPm8x41->pm8x41_resin_status ();
       else if (Context->PonType == 0x0)
         GpioStatus = gPm8x41->pm8x41_get_pwrkey_is_pressed ();
       else
         continue;
+      if (!mPonLogged) {
+        DEBUG((EFI_D_ERROR, "Keypad: PMIC key read OK\n"));
+        mPonLogged = TRUE;
+      }
 
       RC = 0;
     }
