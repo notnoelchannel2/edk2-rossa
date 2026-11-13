@@ -1,13 +1,161 @@
 #include "MMCHS.h"
 
+/* Multi-block self test size: exercises ADMA and the auto CMD12/CMD23 path */
+#define MMC_SELFTEST_BLOCKS  128
+
+/*
+ * Step a slot configuration down to the next, more tolerant, bus mode.
+ * Returns FALSE when there is nothing slower left to try.
+ *
+ *   eMMC: HS200 8-bit -> HS52 SDR 8-bit -> 25MHz 4-bit -> 25MHz 1-bit
+ *   SD:   HS 4-bit (50MHz) -> 25MHz 4-bit -> 25MHz 1-bit
+ */
+STATIC BOOLEAN
+MmcDegradeConfig(struct mmc_config_data *config)
+{
+  if (config->hs200_support || config->hs400_support) {
+    config->hs200_support = 0;
+    config->hs400_support = 0;
+    config->no_ddr        = 1;
+    return TRUE;
+  }
+
+  if (!config->no_hs) {
+    config->no_hs  = 1;
+    config->no_ddr = 1;
+    if (config->bus_width == DATA_BUS_WIDTH_8BIT) {
+      config->bus_width = DATA_BUS_WIDTH_4BIT;
+    }
+    return TRUE;
+  }
+
+  if (config->bus_width != DATA_BUS_WIDTH_1BIT) {
+    config->bus_width = DATA_BUS_WIDTH_1BIT;
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/* Only used in DEBUG() messages, so a macro (a function would be unused in RELEASE) */
+#define MmcModeName(cfg)                                                       \
+  ((cfg)->hs200_support ? "HS200" :                                            \
+   (!(cfg)->no_hs ? "high speed" : "default speed (25MHz)"))
+
+/*
+ * Read the first blocks of a freshly initialized card, once as a single
+ * block and once as a multi-block transfer. A bus mode that the board can't
+ * sustain (signal integrity, IO voltage, marginal card) usually passes
+ * identification and only fails on 4/8-bit data, so check before publishing.
+ */
+STATIC BOOLEAN
+MmcSelfTest(struct mmc_device *dev)
+{
+  UINT32  Blocks = MMC_SELFTEST_BLOCKS;
+  UINT32  Size;
+  VOID   *Buffer;
+  BOOLEAN Ok = FALSE;
+
+  if (dev->card.block_size == 0) {
+    return FALSE;
+  }
+  if (dev->card.capacity / dev->card.block_size < Blocks) {
+    Blocks = (UINT32)(dev->card.capacity / dev->card.block_size);
+  }
+  if (Blocks == 0) {
+    return FALSE;
+  }
+
+  Size   = Blocks * dev->card.block_size;
+  Buffer = AllocatePages(EFI_SIZE_TO_PAGES(Size));
+  if (Buffer == NULL) {
+    /* Can't test, don't hold the device back because of it */
+    return TRUE;
+  }
+
+  arch_clean_invalidate_cache_range((addr_t)Buffer, Size);
+  if (mmc_sdhci_read(dev, Buffer, 0, 1) == 0) {
+    arch_clean_invalidate_cache_range((addr_t)Buffer, Size);
+    Ok = (mmc_sdhci_read(dev, Buffer, 0, Blocks) == 0);
+  }
+
+  FreePages(Buffer, EFI_SIZE_TO_PAGES(Size));
+  return Ok;
+}
+
+/*
+ * Initialize a slot, stepping the bus mode down until a real data read works.
+ * The configuration that worked is kept in dev->config for runtime recovery.
+ */
+STATIC struct mmc_device *
+MmcInitWithFallback(struct mmc_config_data *config)
+{
+  struct mmc_config_data cfg = *config;
+  struct mmc_device     *dev;
+
+  for (;;) {
+    dev = mmc_init(&cfg);
+    if (dev != NULL) {
+      if (MmcSelfTest(dev)) {
+        DEBUG((EFI_D_ERROR, "mmc slot %u: %a, %u-bit bus OK\n", cfg.slot,
+               MmcModeName(&cfg), (cfg.bus_width == DATA_BUS_WIDTH_8BIT) ? 8 :
+               (cfg.bus_width == DATA_BUS_WIDTH_4BIT) ? 4 : 1));
+        return dev;
+      }
+      DEBUG((EFI_D_ERROR, "mmc slot %u: read test failed in %a mode\n",
+             cfg.slot, MmcModeName(&cfg)));
+      free(dev);
+    }
+
+    if (!MmcDegradeConfig(&cfg)) {
+      DEBUG((EFI_D_ERROR, "mmc slot %u: giving up\n", cfg.slot));
+      return NULL;
+    }
+    DEBUG((EFI_D_ERROR, "mmc slot %u: retrying in a slower mode\n", cfg.slot));
+  }
+}
+
+/*
+ * Runtime recovery after a failed transfer: re-initialize the card one step
+ * slower and swap the device in place. Returns 0 on success.
+ */
+STATIC UINT32
+MmcRecover(BIO_INSTANCE *Instance)
+{
+  struct mmc_config_data cfg = Instance->MmcDev->config;
+  struct mmc_device     *dev;
+
+  if (!MmcDegradeConfig(&cfg)) {
+    return 1;
+  }
+
+  DEBUG((EFI_D_ERROR, "mmc slot %u: transfer error, re-initializing slower\n", cfg.slot));
+  dev = MmcInitWithFallback(&cfg);
+  if (dev == NULL) {
+    return 1;
+  }
+
+  /* Must still be the same card */
+  if (dev->card.capacity != Instance->MmcDev->card.capacity ||
+      dev->card.block_size != Instance->MmcDev->card.block_size) {
+    DEBUG((EFI_D_ERROR, "mmc slot %u: card changed during recovery\n", cfg.slot));
+    free(dev);
+    return 1;
+  }
+
+  free(Instance->MmcDev);
+  Instance->MmcDev = dev;
+  return 0;
+}
+
 STATIC struct mmc_device *
 PlatformCallbackInitSlot(struct mmc_config_data *config)
 {
   EFI_STATUS    Status;
   BIO_INSTANCE *Instance;
 
-  // Initialize MMC device
-  struct mmc_device *dev = mmc_init(config);
+  // Initialize MMC device (falls back to slower bus modes if reads fail)
+  struct mmc_device *dev = MmcInitWithFallback(config);
   if (dev == NULL) {
     return NULL;
   }
@@ -210,6 +358,32 @@ mmc_read(BIO_INSTANCE *Instance, UINT64 data_addr, UINT32 *out, UINT32 data_len)
 }
 
 STATIC UINT32
+mmc_read_chunk(BIO_INSTANCE *Instance, UINT8 *dst, UINT64 lba, UINT32 blocks)
+{
+  UINT32 ret;
+  UINT32 size = blocks * Instance->BlockMedia.BlockSize;
+
+  ret = mmc_sdhci_read(Instance->MmcDev, (VOID *)dst, lba, blocks);
+  if (ret == 0)
+    return 0;
+
+  DEBUG((EFI_D_ERROR, "mmc slot %u: failed reading %u blocks @ 0x%lx\n",
+         Instance->MmcDev->config.slot, blocks, lba));
+
+  /* One retry in a slower bus mode */
+  if (MmcRecover(Instance) == 0) {
+    arch_clean_invalidate_cache_range((addr_t)dst, size);
+    ret = mmc_sdhci_read(Instance->MmcDev, (VOID *)dst, lba, blocks);
+    if (ret == 0)
+      return 0;
+    DEBUG((EFI_D_ERROR, "mmc slot %u: read @ 0x%lx still failing\n",
+           Instance->MmcDev->config.slot, lba));
+  }
+
+  return ret;
+}
+
+STATIC UINT32
 mmc_read_aligned(BIO_INSTANCE *Instance, UINT64 data_addr, UINT32 *out, UINT32 data_len)
 {
   UINT32 ret = 0;
@@ -236,13 +410,8 @@ mmc_read_aligned(BIO_INSTANCE *Instance, UINT64 data_addr, UINT32 *out, UINT32 d
    * limitations
    */
   while (data_len > read_size) {
-    ret = mmc_sdhci_read(
-        Instance->MmcDev, (VOID *)sptr, (data_addr / block_size),
-        (read_size / block_size));
+    ret = mmc_read_chunk(Instance, sptr, data_addr / block_size, read_size / block_size);
     if (ret) {
-      DEBUG(
-          (EFI_D_ERROR, "Failed Reading block @ %x\n",
-           (UINTN)(data_addr / block_size)));
       return ret;
     }
     sptr += read_size;
@@ -251,14 +420,7 @@ mmc_read_aligned(BIO_INSTANCE *Instance, UINT64 data_addr, UINT32 *out, UINT32 d
   }
 
   if (data_len)
-    ret = mmc_sdhci_read(
-        Instance->MmcDev, (VOID *)sptr, (data_addr / block_size),
-        (data_len / block_size));
-
-  if (ret)
-    DEBUG(
-        (EFI_D_ERROR, "Failed Reading block @ %x\n",
-         (UINTN)(data_addr / block_size)));
+    ret = mmc_read_chunk(Instance, sptr, data_addr / block_size, data_len / block_size);
 
   return ret;
 }

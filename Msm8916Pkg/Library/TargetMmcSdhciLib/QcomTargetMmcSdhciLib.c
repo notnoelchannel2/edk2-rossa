@@ -115,14 +115,7 @@ STATIC VOID InitEmmc(INIT_SLOT_CB InitSlot)
   config.hs200_support = 1;
   config.hs400_support = 0;
 
-  if (InitSlot(&config) != NULL) {
-    return;
-  }
-
-  /* HS200 tuning is the most fragile part, fall back to HS52/DDR52 */
-  DEBUG((EFI_D_ERROR, "eMMC init failed with HS200, retrying without it\n"));
-  config.hs200_support = 0;
-
+  /* InitSlot steps down HS200 -> HS52 -> 25MHz by itself if reads fail */
   if (InitSlot(&config) == NULL) {
     DEBUG((EFI_D_ERROR, "Can't initialize eMMC (mmc slot %u)\n", MMC_SLOT_EMMC));
   }

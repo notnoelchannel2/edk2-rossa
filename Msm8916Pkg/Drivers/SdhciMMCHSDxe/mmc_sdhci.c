@@ -1497,7 +1497,13 @@ static uint32_t mmc_card_init(struct mmc_device *dev)
 	DEBUG ((EFI_D_INFO | EFI_D_LOAD, "Setting interface speed \n"));
 
 	/* set interface speed */
-	if (MMC_CARD_SD(card))
+	if (cfg->no_hs)
+	{
+		/* Default speed (25MHz), no CMD6 switch: slowest but most tolerant */
+		DEBUG ((EFI_D_INFO | EFI_D_LOAD, "Using default speed (25MHz)\n"));
+		sdhci_clk_supply(host, SDHCI_CLK_25MHZ);
+	}
+	else if (MMC_CARD_SD(card))
 	{
 		mmc_return = mmc_sd_set_hs(host, card);
 		if (mmc_return)
@@ -1588,7 +1594,18 @@ static uint32_t mmc_card_init(struct mmc_device *dev)
 		 * 2. DDR mode host, if supported by host & card
 		 * 3. Use normal speed mode with supported bus width
 		 */
-		if (host->caps.hs400_support && mmc_card_supports_hs400_mode(card))
+		if (cfg->no_hs)
+		{
+			/* Already at 25MHz default speed, only widen the bus */
+			DEBUG ((EFI_D_INFO | EFI_D_LOAD, "SDHC Running in default speed mode \n"));
+			mmc_return = mmc_set_bus_width(host, card, bus_width);
+			if (mmc_return) {
+				dprintf(CRITICAL, "Failure to set wide bus for Card(RCA:%x)\n",
+								  card->rca);
+				return mmc_return;
+			}
+		}
+		else if (host->caps.hs400_support && mmc_card_supports_hs400_mode(card))
 		{
 			dprintf(INFO, "SDHC Running in HS400 mode\n");
 			DEBUG ((EFI_D_INFO | EFI_D_LOAD, "SDHC Running in HS400 mode \n"));
@@ -1614,7 +1631,7 @@ static uint32_t mmc_card_init(struct mmc_device *dev)
 								  card->rca);
 				return mmc_return;
 			}
-		} else if (host->caps.ddr_support && mmc_card_supports_ddr_mode(card)) {
+		} else if (!cfg->no_ddr && host->caps.ddr_support && mmc_card_supports_ddr_mode(card)) {
 			DEBUG ((EFI_D_INFO | EFI_D_LOAD, "SDHC Running in DDR mode \n"));
 			dprintf(INFO, "SDHC Running in DDR mode\n");
 			mmc_return = mmc_set_ddr_mode(host, card);
@@ -1646,7 +1663,8 @@ static uint32_t mmc_card_init(struct mmc_device *dev)
 	else
 	{
 		/* Check the supported bus width for the card from SCR register */
-		if (card->scr.bus_widths & SD_SCR_WIDTH_4BIT)
+		if ((card->scr.bus_widths & SD_SCR_WIDTH_4BIT) &&
+		    cfg->bus_width != DATA_BUS_WIDTH_1BIT)
 			bus_width = DATA_BUS_WIDTH_4BIT;
 		else
 			bus_width = DATA_BUS_WIDTH_1BIT;
@@ -1891,10 +1909,12 @@ uint32_t mmc_sdhci_read(struct mmc_device *dev, void *dest,
 	/* send command */
 	mmc_ret = sdhci_send_command(&dev->host, &cmd);
 
-	/* For multi block read failures send stop command */
-	if (mmc_ret && num_blocks > 1)
+	/* For multi block read failures send stop command, but report the failure */
+	if (mmc_ret)
 	{
-		return mmc_stop_command(dev);
+		if (num_blocks > 1)
+			mmc_stop_command(dev);
+		return 1;
 	}
 
 	/*
@@ -1960,10 +1980,12 @@ uint32_t mmc_sdhci_write(struct mmc_device *dev, void *src,
 	/* send command */
 	mmc_ret = sdhci_send_command(&dev->host, &cmd);
 
-	/* For multi block write failures send stop command */
-	if (mmc_ret && num_blocks > 1)
+	/* For multi block write failures send stop command, but report the failure */
+	if (mmc_ret)
 	{
-		return mmc_stop_command(dev);
+		if (num_blocks > 1)
+			mmc_stop_command(dev);
+		return 1;
 	}
 
 	/*

@@ -9,6 +9,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include <Library/MallocLib.h>
 #include <Library/PcdLib.h>
 #include <Library/QcomPlatformMmcLib.h>
 #include <Library/QcomTargetMmcSdhciLib.h>

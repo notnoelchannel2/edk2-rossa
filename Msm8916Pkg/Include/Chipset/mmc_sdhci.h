@@ -329,6 +329,8 @@ struct mmc_config_data {
 	uint8_t hs200_support; /* SDHC HS200 mode supported or not */
 	uint8_t hs400_support; /* SDHC HS400 mode supported or not */
 	uint8_t use_io_switch; /* IO pad switch flag for shared sdc controller */
+	uint8_t no_ddr;        /* eMMC: never use DDR52 */
+	uint8_t no_hs;         /* Stay at 25MHz default speed (no HS/HS200 switch) */
 };
 
 /* mmc device structure */
