@@ -450,6 +450,38 @@ VOID PlatformRegisterOptionsAndKeys(VOID)
   ASSERT(Status == EFI_SUCCESS || Status == EFI_ALREADY_STARTED);
 }
 
+/**
+  Add the device path of every handle carrying Protocol to ConIn.
+  Handles without a device path (e.g. ConSplitter's virtual handle) are skipped.
+**/
+STATIC
+VOID
+AddInputDevices(IN EFI_GUID *Protocol)
+{
+  EFI_STATUS                Status;
+  EFI_HANDLE               *Handles;
+  UINTN                     NoHandles;
+  UINTN                     Index;
+  EFI_DEVICE_PATH_PROTOCOL *DevicePath;
+
+  Status = gBS->LocateHandleBuffer(ByProtocol, Protocol, NULL, &NoHandles, &Handles);
+  if (EFI_ERROR(Status)) {
+    return;
+  }
+
+  for (Index = 0; Index < NoHandles; Index++) {
+    DevicePath = DevicePathFromHandle(Handles[Index]);
+    if (DevicePath == NULL) {
+      continue;
+    }
+    Status = EfiBootManagerUpdateConsoleVariable(ConIn, DevicePath, NULL);
+    DEBUG((EFI_D_INFO, "%a: %g handle %u added to ConIn: %r\n", __FUNCTION__,
+           Protocol, Index, Status));
+  }
+
+  FreePool(Handles);
+}
+
 //
 // BDS Platform Functions
 //
@@ -502,21 +534,16 @@ VOID EFIAPI PlatformBootManagerBeforeConsole(VOID)
   EfiBootManagerUpdateConsoleVariable(
       ConIn, (EFI_DEVICE_PATH_PROTOCOL *)&mUsbKeyboard, NULL);
 
-  EFI_HANDLE *              handles;
-  UINTN                     NoHandles;
-  EFI_DEVICE_PATH_PROTOCOL *devicehandle;
-  /*CHAR16 *devicepathtxt;*/
-   EfiBootManagerUpdateConsoleVariable(ConIn,
-    (EFI_DEVICE_PATH_PROTOCOL*)&gEFIDroidKeypadDeviceProtocolGuid, NULL);
-  gBS->LocateHandleBuffer(
-      ByProtocol, &gEfiSimpleTextInputExProtocolGuid, NULL, &NoHandles,
-      &handles);
-  devicehandle = DevicePathFromHandle(handles[1]);
-  EfiBootManagerUpdateConsoleVariable(
-      ConIn, devicehandle, NULL); /*
-            devicepathtxt = ConvertDevicePathToText(devicehandle,TRUE,TRUE);
-            DEBUG((DEBUG_ERROR,"There are %s handles\n",devicepathtxt));
-            ASSERT(0);*/
+  //
+  // Add every keypad device (Msm8916Pkg GenericKeypadDeviceDxe, KeypadDxe binds
+  // to it) and every text input device that already has a device path to ConIn.
+  //
+  // This used to pass a protocol GUID cast to a device path and take
+  // handles[1] without checking how many handles there were; both read
+  // random memory and could hang RELEASE builds before the console came up.
+  //
+  AddInputDevices(&gEFIDroidKeypadDeviceProtocolGuid);
+  AddInputDevices(&gEfiSimpleTextInputExProtocolGuid);
 
   //
   // Add the hardcoded serial console device path to ConIn, ConOut, ErrOut.
