@@ -206,6 +206,11 @@
 
   # SoC Drivers SPMI
   gQcomTokenSpaceGuid.PcdSpmiBaseAddress|0x02000000
+  # MSM8916 has a v2 PMIC arbiter (mainline msm8916.dtsi: core 0x200f000,
+  # chnls 0x2400000, obsrvr 0x2c00000). The v1 path wrote commands to
+  # core+0x800, which on v2 is the ppid table: SError on the first PMIC access.
+  gQcomTokenSpaceGuid.PcdSpmiVersion|2
+  gQcomTokenSpaceGuid.PcdPmicArbCoreAddress|0x0200F000
 
   # SoC Drivers MMC
   gQcomTokenSpaceGuid.PcdSdccMciHcMode|0x00000078

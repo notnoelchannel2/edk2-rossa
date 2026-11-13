@@ -61,8 +61,14 @@
   # Vol- on PM8916 RESIN, Power on PM8916 KPDPWR
   gQcomTokenSpaceGuid.PcdKeypadVolumeUpGpio|107
   gQcomTokenSpaceGuid.PcdKeypadHomeGpio|109
+!ifdef NO_PMIC_KEYS
+  # Test build: don't touch the PMIC bus (SPMI) for keys
+  gQcomTokenSpaceGuid.PcdKeypadVolumeDownResin|FALSE
+  gQcomTokenSpaceGuid.PcdKeypadPowerPon|FALSE
+!else
   gQcomTokenSpaceGuid.PcdKeypadVolumeDownResin|TRUE
   gQcomTokenSpaceGuid.PcdKeypadPowerPon|TRUE
+!endif
 
 [PcdsPatchableInModule.common]
   # 480 px is only 60 text columns, so there is no 80x25 mode: let the

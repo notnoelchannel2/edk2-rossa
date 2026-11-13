@@ -128,7 +128,7 @@ int spmi_init(void)
 	max_peripherals = PcdGet64(PcdSpmiMaxPeripherals);
 	DEBUG((EFI_D_ERROR, "SPMI: PMIC arbiter version 0x%08x\n", pmic_arb_ver));
 
-	if (pmic_arb_ver < PMIC_ARB_V2)
+	if (pmic_arb_ver < PMIC_ARB_V2 && spmi_version != 2)
 	{
 		/* Initialize PMIC Arbiter Channel Number to
 		 * 0 by default of V1 HW
@@ -193,7 +193,7 @@ long long unsigned int pmic_arb_write_cmd(struct pmic_arb_cmd *cmd,
 	 * For V1-HW we dont care for channel number & always
 	 * use '0'
 	 */
-	if (pmic_arb_ver >= PMIC_ARB_V2 && chnl_tbl != NULL)
+	if ((pmic_arb_ver >= PMIC_ARB_V2 || spmi_version == 2) && chnl_tbl != NULL)
 	{
 		pmic_arb_chnl_num = chnl_tbl[CHNL_IDX(cmd->slave_id, cmd->address)];
 	}
@@ -314,7 +314,7 @@ long long unsigned int pmic_arb_read_cmd(struct pmic_arb_cmd *cmd,
 	 * For V1-HW we dont care for channel number & always
 	 * use '0'
 	 */
-	if (pmic_arb_ver >= PMIC_ARB_V2 && chnl_tbl != NULL)
+	if ((pmic_arb_ver >= PMIC_ARB_V2 || spmi_version == 2) && chnl_tbl != NULL)
 	{
 		pmic_arb_chnl_num = chnl_tbl[CHNL_IDX(cmd->slave_id, cmd->address)];
 	}
