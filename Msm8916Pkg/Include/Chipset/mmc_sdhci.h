@@ -234,6 +234,15 @@
 #define MMC_CARD_SD(card) ((card->type == MMC_CARD_TYPE_SDHC) || \
 						   (card->type == MMC_CARD_TYPE_STD_SD))
 
+/*
+ * Standard capacity cards (SDSC <= 2 GB with CSD v1, and MMC up to 2 GB) take
+ * a byte address in CMD17/18/24/25/32/33; SDHC/SDXC and high capacity eMMC
+ * take a block number. Only STD_MMC was handled, so SDSC cards read the
+ * wrong data from block 1 on (block 0 = byte 0 happened to work).
+ */
+#define MMC_CARD_BYTE_ADDRESSED(card) ((card->type == MMC_TYPE_STD_MMC) || \
+                                       (card->type == MMC_CARD_TYPE_STD_SD))
+
 #define MMC_CARD_MMC(card) ((card->type == MMC_TYPE_STD_MMC) || \
 							(card->type == MMC_TYPE_MMCHC))
 

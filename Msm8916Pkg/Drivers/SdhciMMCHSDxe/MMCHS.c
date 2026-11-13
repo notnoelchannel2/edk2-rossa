@@ -84,6 +84,12 @@ MmcSelfTest(struct mmc_device *dev)
     Ok = (mmc_sdhci_read(dev, Buffer, 0, Blocks) == 0);
   }
 
+  /* A block other than 0 too: catches block/byte addressing mix-ups (SDSC) */
+  if (Ok && Blocks > 64) {
+    arch_clean_invalidate_cache_range((addr_t)Buffer, Size);
+    Ok = (mmc_sdhci_read(dev, Buffer, 64, 1) == 0);
+  }
+
   /*
    * After a failed transfer the controller may still write into the buffer
    * (DMA isn't guaranteed to be stopped), so only hand it back on success.
