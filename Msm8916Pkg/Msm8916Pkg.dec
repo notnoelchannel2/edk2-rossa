@@ -57,6 +57,10 @@
   gMsm8916PkgTokenSpaceGuid.PcdDeviceProduct|"Galaxy J5 2015"|VOID*|0x0000a302
   gMsm8916PkgTokenSpaceGuid.PcdDeviceCodeName|"j5nlte"|VOID*|0x0000a303
 
+  # TRUE: don't auto-boot the UEFI Shell (only list it in the boot manager
+  # menu), for devices with side keys but no keyboard
+  gMsm8916PkgTokenSpaceGuid.PcdBootToMenu|FALSE|BOOLEAN|0x0000a304
+
   # GpioTlmmDxe and GpioTlmmInterruptDxe
   gQcomTokenSpaceGuid.PcdGpioTlmmBaseAddress|0|UINT64|0x00000100
   gQcomTokenSpaceGuid.PcdGpioTlmmSummaryIrq|0|UINT64|0x00000101

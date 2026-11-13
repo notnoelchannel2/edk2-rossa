@@ -23,6 +23,9 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/DebugLib.h>
 #include <Library/DevicePathLib.h>
+#include <Protocol/FirmwareVolume2.h>
+#include <Guid/GlobalVariable.h>
+#include <Protocol/LoadedImage.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>

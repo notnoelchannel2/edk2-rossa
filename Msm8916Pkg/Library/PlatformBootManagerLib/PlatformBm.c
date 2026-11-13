@@ -332,6 +332,45 @@ PlatformRegisterFvBootOption(
   return OptionNumber;
 }
 
+/*
+ * Msm8916Pkg test apps. Registered as APP category options: listed in the
+ * boot manager menu (so they can be started with the side keys, without
+ * typing in the Shell) but never booted automatically.
+ */
+STATIC CONST EFI_GUID mTouchTestAppGuid =
+  { 0x8B2E5C1A, 0x3F47, 0x4C69, { 0xA1, 0xD2, 0x7E, 0x9B, 0x0C, 0x4F, 0x6A, 0x15 } };
+STATIC CONST EFI_GUID mJ5DiagAppGuid =
+  { 0x4D1F7A60, 0x2C3B, 0x4E85, { 0x9F, 0x14, 0x6B, 0x0A, 0x8E, 0x2D, 0x5C, 0x93 } };
+
+/* TRUE if FileGuid is in the firmware volume this driver was loaded from */
+STATIC
+BOOLEAN
+FvFileExists(CONST EFI_GUID *FileGuid)
+{
+  EFI_STATUS                     Status;
+  EFI_LOADED_IMAGE_PROTOCOL     *LoadedImage;
+  EFI_FIRMWARE_VOLUME2_PROTOCOL *Fv;
+  UINTN                          Size = 0;
+  EFI_FV_FILETYPE                Type;
+  EFI_FV_FILE_ATTRIBUTES         Attributes;
+  UINT32                         AuthStatus;
+
+  Status = gBS->HandleProtocol(
+      gImageHandle, &gEfiLoadedImageProtocolGuid, (VOID **)&LoadedImage);
+  if (EFI_ERROR(Status)) {
+    return FALSE;
+  }
+
+  Status = gBS->HandleProtocol(
+      LoadedImage->DeviceHandle, &gEfiFirmwareVolume2ProtocolGuid, (VOID **)&Fv);
+  if (EFI_ERROR(Status)) {
+    return FALSE;
+  }
+
+  Status = Fv->ReadFile(Fv, FileGuid, NULL, &Size, &Type, &Attributes, &AuthStatus);
+  return !EFI_ERROR(Status);
+}
+
 STATIC
 VOID GetPlatformOptions(VOID)
 {
@@ -690,8 +729,29 @@ VOID EFIAPI PlatformBootManagerAfterConsole(VOID)
   //
   // Register UEFI Shell
   //
+  //
+  // Without a keyboard (PcdBootToMenu) the Shell is a dead end: list it in the
+  // boot manager menu, but don't boot it automatically. With nothing else to
+  // boot, BDS then ends up in PlatformBootManagerUnableToBoot -> menu.
+  //
   PlatformRegisterFvBootOption(
-      &gUefiShellFileGuid, L"UEFI Shell", LOAD_OPTION_ACTIVE);
+      &gUefiShellFileGuid, L"UEFI Shell",
+      FixedPcdGetBool(PcdBootToMenu) ? (LOAD_OPTION_ACTIVE | LOAD_OPTION_CATEGORY_APP)
+                                     : LOAD_OPTION_ACTIVE);
+
+  //
+  // Test apps, launchable from the boot manager menu without a keyboard
+  //
+  if (FvFileExists(&mTouchTestAppGuid)) {
+    PlatformRegisterFvBootOption(
+        &mTouchTestAppGuid, L"Touch Test",
+        LOAD_OPTION_ACTIVE | LOAD_OPTION_CATEGORY_APP);
+  }
+  if (FvFileExists(&mJ5DiagAppGuid)) {
+    PlatformRegisterFvBootOption(
+        &mJ5DiagAppGuid, L"Diagnostics (J5Diag)",
+        LOAD_OPTION_ACTIVE | LOAD_OPTION_CATEGORY_APP);
+  }
   DEBUG((EFI_D_ERROR, "BDS: boot options ready\n"));
 }
 
@@ -735,4 +795,21 @@ VOID EFIAPI PlatformBootManagerWaitCallback(UINT16 TimeoutRemain)
 
   If this function returns, BDS attempts to enter an infinite loop.
 **/
-VOID EFIAPI PlatformBootManagerUnableToBoot(VOID) { return; }
+VOID EFIAPI PlatformBootManagerUnableToBoot(VOID)
+{
+  EFI_STATUS                   Status;
+  EFI_BOOT_MANAGER_LOAD_OPTION BootManagerMenu;
+
+  //
+  // Nothing bootable: show the boot manager menu instead of hanging in
+  // BDS's CpuDeadLoop. Returning from the menu just shows it again.
+  //
+  Status = EfiBootManagerGetBootManagerMenu(&BootManagerMenu);
+  if (EFI_ERROR(Status)) {
+    return;
+  }
+
+  for (;;) {
+    EfiBootManagerBoot(&BootManagerMenu);
+  }
+}

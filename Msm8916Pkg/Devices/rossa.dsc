@@ -59,6 +59,11 @@
 
   # Keys: Vol+ gpio107, Home gpio109 (both active low, pull-up),
   # Vol- on PM8916 RESIN, Power on PM8916 KPDPWR
+  # No keyboard: the UEFI Shell (needs typing) is only listed in the boot
+  # manager menu instead of being booted automatically; with nothing else
+  # to boot the menu comes up (side keys work there)
+  gMsm8916PkgTokenSpaceGuid.PcdBootToMenu|TRUE
+
   gQcomTokenSpaceGuid.PcdKeypadVolumeUpGpio|107
   gQcomTokenSpaceGuid.PcdKeypadHomeGpio|109
 !ifdef NO_PMIC_KEYS
