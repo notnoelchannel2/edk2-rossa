@@ -1440,6 +1440,20 @@ uint32_t mmc_sd_set_hs(struct sdhci_host *host, struct mmc_card *card)
              return 1;
        }
 
+	/*
+	 * Bits 379:376 of the switch status = function now selected in group 1
+	 * (access mode): 1 = high speed. Old cards (SD 1.x, many <= 2 GB) don't
+	 * support it; running them at 50MHz anyway corrupts every transfer, so
+	 * stay at default speed (25MHz) unless the card confirmed the switch.
+	 */
+	if ((((uint8_t *)switch_resp)[16] & 0xF) != 1) {
+		dprintf(INFO, "SD card has no high speed mode, using 25MHz\n");
+		DEBUG ((EFI_D_ERROR, "SD card has no high speed mode, using 25MHz\n"));
+		FreePages(switch_resp, EFI_SIZE_TO_PAGES(ROUNDUP(64, CACHE_LINE)));
+		sdhci_clk_supply(host, SDHCI_CLK_25MHZ);
+		return 0;
+	}
+
 	/* Set the SDR25 mode in controller*/
 	sdhci_set_uhs_mode(host, SDHCI_SDR25_MODE);
 

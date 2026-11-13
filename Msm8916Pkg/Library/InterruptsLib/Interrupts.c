@@ -82,9 +82,17 @@ VOID register_int_handler(UINTN Vector, int_handler Handler, VOID *Arg)
   EFI_TPL        OriginalTPL;
   HANDLER_ENTRY  *Entry;
 
-  // make sure, we didn't register a handler already
+  // Already registered (e.g. an SD/eMMC slot re-initialized in a slower
+  // mode): point the existing entry at the new handler/argument. The GIC
+  // source is registered already, so nothing else to do.
   Entry = GetInterruptHandlerEntry (Vector);
-  ASSERT (Entry == NULL);
+  if (Entry != NULL) {
+    OriginalTPL = gBS->RaiseTPL (TPL_HIGH_LEVEL);
+    Entry->Handler = Handler;
+    Entry->Arg     = Arg;
+    gBS->RestoreTPL (OriginalTPL);
+    return;
+  }
 
   // allocate entry structure
   Entry = AllocateZeroPool (sizeof (HANDLER_ENTRY));
