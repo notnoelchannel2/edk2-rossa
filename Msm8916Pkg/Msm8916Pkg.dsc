@@ -16,6 +16,12 @@
 #
 ################################################################################
 
+# Device .dsc files can pick their own ACPI table set (DSDT) before the
+# !include of this file; the INFs share the ACPI storage FILE_GUID.
+!ifndef ACPI_TABLES_INF
+  DEFINE ACPI_TABLES_INF = Msm8916Pkg/AcpiTables/AcpiTables.inf
+!endif
+
 !include Msm8916Pkg/CommonDsc.dsc.inc
 
 [LibraryClasses]
@@ -302,7 +308,11 @@
 
   MdeModulePkg/Universal/CapsuleRuntimeDxe/CapsuleRuntimeDxe.inf
   EmbeddedPkg/EmbeddedMonotonicCounter/EmbeddedMonotonicCounter.inf
-  MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf
+  MdeModulePkg/Universal/ResetSystemRuntimeDxe/ResetSystemRuntimeDxe.inf {
+    <LibraryClasses>
+      # No PSCI on the Samsung TrustZone: reset/power off through the PMIC
+      ResetSystemLib|Msm8916Pkg/Library/Msm8916ResetSystemLib/Msm8916ResetSystemLib.inf
+  }
   EmbeddedPkg/RealTimeClockRuntimeDxe/RealTimeClockRuntimeDxe.inf
   EmbeddedPkg/MetronomeDxe/MetronomeDxe.inf
 
@@ -389,7 +399,7 @@
   MdeModulePkg/Universal/Acpi/AcpiTableDxe/AcpiTableDxe.inf
   MdeModulePkg/Universal/Acpi/AcpiPlatformDxe/AcpiPlatformDxe.inf
   MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
-  Msm8916Pkg/AcpiTables/AcpiTables.inf
+  $(ACPI_TABLES_INF)
 
   #
   # FDT support

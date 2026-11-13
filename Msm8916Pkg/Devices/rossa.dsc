@@ -18,6 +18,9 @@
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = Msm8916Pkg/Devices/rossa.fdf
 
+  # DSDT with the rossa touch device (RSTS0001, GPIO73 instead of 108)
+  DEFINE ACPI_TABLES_INF         = Msm8916Pkg/AcpiTables/AcpiTablesRossa.inf
+
 !include Msm8916Pkg/Msm8916Pkg.dsc
 
 [BuildOptions.common]
@@ -86,4 +89,4 @@
   Msm8916Pkg/Drivers/GraphicsConsoleDxe/GraphicsConsoleDxe.inf
   Msm8916Pkg/Drivers/Ist3038cTouchDxe/Ist3038cTouchDxe.inf
   Msm8916Pkg/Application/TouchTestApp/TouchTestApp.inf
-  Msm8916Pkg/Application/J5DiagApp/J5DiagApp.inf
+  Msm8916Pkg/Application/RossaDiagApp/RossaDiagApp.inf

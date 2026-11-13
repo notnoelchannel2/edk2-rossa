@@ -1,0 +1,40 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = RossaDiag
+  FILE_GUID                      = 2B6E9F31-7C4A-4D0B-8E52-91A3F6D0C7E8
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = RossaDiagMain
+
+[Sources]
+  RossaDiagApp.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  ArmPkg/ArmPkg.dec
+  Msm8916Pkg/Msm8916Pkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  BaseLib
+  BaseMemoryLib
+  IoLib
+  MemoryAllocationLib
+  PcdLib
+  ArmLib
+  ArmGenericTimerCounterLib
+
+[Protocols]
+  gEfiBlockIoProtocolGuid
+  gEfiGraphicsOutputProtocolGuid
+  gEfiAbsolutePointerProtocolGuid
+  gQcomPm8x41ProtocolGuid
+
+[Pcd]
+  gArmTokenSpaceGuid.PcdGicDistributorBase
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
+  gArmTokenSpaceGuid.PcdSystemMemorySize
+  gQcomTokenSpaceGuid.PcdSpmiBaseAddress
+  gMsm8916PkgTokenSpaceGuid.PcdDeviceProduct

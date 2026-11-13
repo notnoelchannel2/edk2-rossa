@@ -19,6 +19,8 @@ image below (`--base 0x80000000 --kernel_offset 0x00080000 --pagesize 2048`).
 | Keys | Vol+/Vol-/Power/Home | Up / Down / Enter / Esc |
 | USB OTG host | no | J5 driver targets SM5703; rossa has RT5033 + SM5504 |
 | CPU cores | 1 | same as J5 |
+| Reset / power off | yes | PMIC PS_HOLD (no PSCI in Samsung's TrustZone) |
+| Windows PE touch + keyboard | yes | [rossa-winpe](https://github.com/notnoelchannel2/rossa-winpe): rossatouch, rossaosk |
 
 What differs from the J5 targets (all selected by `Devices/rossa.dsc`):
 
@@ -44,8 +46,16 @@ What differs from the J5 targets (all selected by `Devices/rossa.dsc`):
   `0xce08ff01` revisions 0-15.
 - **SMBIOS**: vendor/product come from the device PCDs, memory size from
   `PcdSystemMemorySize`.
-- The Windows `J5TS0001` touch entry in the shared DSDT is for the J5's
-  IST3038C driver and won't work with rossa's touch controller.
+- **DSDT**: rossa uses `AcpiTables/DSDT_ROSSA.AML` (source
+  `Dsdt/DsdtRossa.asl`): the touch device is `RSTS0001` with GPIO 13/18/19/73,
+  for the `rossatouch` Windows driver.
+- **No keyboard**: the boot manager menu comes up instead of the UEFI Shell
+  (`PcdBootToMenu`); the Shell, *Touch Test* and *Diagnostics (RossaDiag)* are
+  menu entries. An SD card with `EFI\BOOT\BOOTAA64.EFI` still boots on its own.
+- **SPMI**: MSM8916 has a v2 PMIC arbiter (`PcdSpmiVersion = 2`); with the
+  old v1 setting the first PMIC access (keys) ended in an SError.
+- **Reset**: `Msm8916ResetSystemLib` sets the PMIC PS_HOLD action (hard reset
+  or shutdown) and drops PS_HOLD, like Qualcomm's LK.
 
 ## Status
 

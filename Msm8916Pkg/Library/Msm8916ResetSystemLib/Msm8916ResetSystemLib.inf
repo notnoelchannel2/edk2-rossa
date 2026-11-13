@@ -1,0 +1,39 @@
+## @file
+#  ResetSystemLib for MSM8916: PMIC PON PS_HOLD reset type + drop MSM PS_HOLD,
+#  like Qualcomm's LK (reboot_device/shutdown_device). The Samsung TrustZone
+#  on these phones has no PSCI, so ArmSmcPsciResetSystemLib just returns.
+#
+#  Self-contained SPMI v2 access (no protocol dependency) and runtime safe:
+#  the MMIO pointers are converted on SetVirtualAddressMap.
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010019
+  BASE_NAME                      = Msm8916ResetSystemLib
+  FILE_GUID                      = 5C0F3E2A-9B71-4D36-8A0E-1F6C2D7B9E44
+  MODULE_TYPE                    = DXE_RUNTIME_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = ResetSystemLib|DXE_RUNTIME_DRIVER
+  CONSTRUCTOR                    = Msm8916ResetSystemLibConstructor
+
+[Sources]
+  Msm8916ResetSystemLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Msm8916Pkg/Msm8916Pkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  IoLib
+  UefiBootServicesTableLib
+  UefiRuntimeLib
+
+[Guids]
+  gEfiEventVirtualAddressChangeGuid
+
+[FixedPcd]
+  gQcomTokenSpaceGuid.PcdPmicArbCoreAddress
+  gQcomTokenSpaceGuid.PcdSpmiBaseAddress
