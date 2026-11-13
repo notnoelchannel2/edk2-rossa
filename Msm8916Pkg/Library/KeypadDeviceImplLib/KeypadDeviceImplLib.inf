@@ -20,3 +20,9 @@
   Pm8x41Lib
   TimerLib
   GpioTlmmLib
+
+[FixedPcd]
+  gQcomTokenSpaceGuid.PcdKeypadVolumeUpGpio
+  gQcomTokenSpaceGuid.PcdKeypadHomeGpio
+  gQcomTokenSpaceGuid.PcdKeypadVolumeDownResin
+  gQcomTokenSpaceGuid.PcdKeypadPowerPon

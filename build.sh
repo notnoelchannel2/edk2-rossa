@@ -1,6 +1,6 @@
 #!/bin/bash
 # based on the instructions from edk2-platforms
-# usage: ./build.sh [device] [DEBUG|RELEASE]   (device: j5nlte, j5xlte)
+# usage: ./build.sh [device] [DEBUG|RELEASE]   (device: j5nlte, j5xlte, rossa)
 DEVICE=${1:-j5nlte}
 TARGET=${2:-DEBUG}
 rm -rf "boot-$DEVICE.img"

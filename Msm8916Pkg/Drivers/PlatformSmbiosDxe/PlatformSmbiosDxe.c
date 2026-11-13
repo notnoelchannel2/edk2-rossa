@@ -625,7 +625,7 @@ STATIC CONST ARM_TYPE17 mArmDefaultType17 = {
     0xFFFE,               //no errors
     64, //single DIMM, no ECC is 64bits (for ecc this would be 72)
     64, //data width of this device (64-bits)
-    0x2000, //8GB
+    (UINT16)(FixedPcdGet64 (PcdSystemMemorySize) >> 20), //size in MB
     0x0B,   //row of chips
     0,      //not part of a set
     1,      //right side of board
@@ -739,7 +739,7 @@ InstallMemoryStructure (
   CopyMem( &MemoryDescriptor, &mArmDefaultType19, sizeof(ARM_TYPE19));
 
   MemoryDescriptor.Base.ExtendedStartingAddress = StartingAddress;
-  MemoryDescriptor.Base.ExtendedEndingAddress = StartingAddress+RegionLength;
+  MemoryDescriptor.Base.ExtendedEndingAddress = StartingAddress + RegionLength - 1;
   SmbiosHandle = MemoryDescriptor.Base.Hdr.Handle;
 
   Status = Smbios->Add (
@@ -777,6 +777,17 @@ InstallStructures (
 	    );
 	if (EFI_ERROR(Status))
 	    break;
+
+	/* Product name (string 2 of type 1 and 2) comes from the device .dsc */
+	if (((EFI_SMBIOS_TABLE_HEADER*)DefaultTables[TableEntry])->Type == EFI_SMBIOS_TYPE_SYSTEM_INFORMATION ||
+	    ((EFI_SMBIOS_TABLE_HEADER*)DefaultTables[TableEntry])->Type == EFI_SMBIOS_TYPE_BASEBOARD_INFORMATION) {
+	    UINTN StringNumber = 1;
+	    Smbios->UpdateString (Smbios, &SmbiosHandle, &StringNumber,
+	                          (CHAR8 *)FixedPcdGetPtr (PcdDeviceVendor));
+	    StringNumber = 2;
+	    Smbios->UpdateString (Smbios, &SmbiosHandle, &StringNumber,
+	                          (CHAR8 *)FixedPcdGetPtr (PcdDeviceProduct));
+	}
     }
     return Status;
 }

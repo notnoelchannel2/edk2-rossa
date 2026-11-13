@@ -58,6 +58,57 @@ PaintScreen(
 	}
 }
 
+/*
+ * The bootloader (stock aboot / lk2nd) leaves the DSI panel running in
+ * continuous splash mode from one MDP source pipe. Re-point that pipe at our
+ * framebuffer in 32bpp ARGB8888 with the stride of PcdMipiFrameBufferWidth.
+ *
+ * The scanout address is programmed explicitly instead of trusting the
+ * bootloader to have used PcdMipiFrameBufferAddress: the Samsung bootloaders
+ * keep their splash at 0x83000000 (cont_splash_mem), which is ordinary RAM in
+ * our memory map. Video mode panels latch the new pipe state on the next
+ * vsync after CTL_FLUSH.
+ */
+typedef struct {
+  UINT32  Base;
+  UINT32  StageShift;
+  UINT32  FlushBit;
+} MDP_PIPE_INFO;
+
+STATIC CONST MDP_PIPE_INFO mMdpPipes[] = {
+  { MDP_VP_0_RGB_0_BASE, CTL_LAYER_RGB0_SHIFT, CTL_FLUSH_RGB0 },  /* lk default */
+  { MDP_VP_0_RGB_1_BASE, CTL_LAYER_RGB1_SHIFT, CTL_FLUSH_RGB1 },
+  { MDP_VP_0_VIG_0_BASE, CTL_LAYER_VIG0_SHIFT, CTL_FLUSH_VIG0 },
+  { MDP_VP_0_DMA_0_BASE, CTL_LAYER_DMA0_SHIFT, CTL_FLUSH_DMA0 },
+};
+
+STATIC
+VOID
+SetupScanout (
+  VOID
+  )
+{
+  CONST MDP_PIPE_INFO *Pipe = &mMdpPipes[0];
+  UINT32              Layer;
+  UINTN               Index;
+
+  /* Which pipe is staged on mixer 0? Fall back to RGB0 if none looks staged. */
+  Layer = MmioRead32 (MDP_CTL_0_BASE + CTL_LAYER_0);
+  for (Index = 0; Index < ARRAY_SIZE (mMdpPipes); Index++) {
+    if (((Layer >> mMdpPipes[Index].StageShift) & 0x7) != 0) {
+      Pipe = &mMdpPipes[Index];
+      break;
+    }
+  }
+
+  /* Switch to 32bpp argb8888 at our address and stride */
+  MmioWrite32 (Pipe->Base + PIPE_SSPP_SRC0_ADDR, (UINT32)FbAddr);
+  MmioWrite32 (Pipe->Base + PIPE_SSPP_SRC_FORMAT, 0x000236FF);
+  MmioWrite32 (Pipe->Base + PIPE_SSPP_SRC_UNPACK_PATTERN, 0x03020001);
+  MmioWrite32 (Pipe->Base + PIPE_SSPP_SRC_YSTRIDE, (UINT32)(Width * (Bpp / 8)));
+  MmioWrite32 (MDP_CTL_0_BASE + CTL_FLUSH, Pipe->FlushBit);
+}
+
 EFI_STATUS
 GetPlatformPpi (
   IN  EFI_GUID  *PpiGuid,
@@ -109,11 +160,8 @@ PrePiMain (
   // Flush FrameBuffer
   PaintScreen(0);
 
-  /* Switch to 32bpp argb8888 */
-  MmioWrite32(PIPE_BASE + PIPE_SSPP_SRC_FORMAT, 0x000236FF);
-  MmioWrite32(PIPE_BASE + PIPE_SSPP_SRC_UNPACK_PATTERN, 0x03020001);
-  MmioWrite32(PIPE_BASE + PIPE_SSPP_SRC_YSTRIDE, 720 * 4);
-  MmioWrite32(MDP_CTL_0_BASE + CTL_FLUSH, (1 << (3)));
+  // Take over the panel the bootloader left running
+  SetupScanout();
 
   // Initialize the architecture specific bits
   ArchInitialize ();

@@ -3,6 +3,50 @@
 <img width="875" height="713" alt="photo_2026-08-10_19-11-33" src="https://github.com/user-attachments/assets/98ab62c9-6815-4e60-8ef1-d5ecc39fab57" />
 
 
+## Galaxy Core Prime LTE (rossa, SM-G360F) port
+
+`./build.sh rossa RELEASE` builds `boot-rossa.img` for the Core Prime LTE
+(MSM8916, 1 GB RAM, 480x800). Wrap and boot it from lk2nd exactly like the J5
+image below (`--base 0x80000000 --kernel_offset 0x00080000 --pagesize 2048`).
+
+| | rossa (UEFI) | Notes |
+|---|---|---|
+| Display (framebuffer) | 480x800 | PrePi re-points the MDP pipe at `0x8e000000` |
+| Memory map | 1 GB | own table, `Include/Configuration/DeviceMemoryMapRossa.h` |
+| SD card (SDC2) | yes | card detect GPIO 38 |
+| eMMC (SDC1) | read-only | same protection as J5 |
+| Touchscreen (IST3038) | yes | legacy IST30xx protocol, auto-detected |
+| Keys | Vol+/Vol-/Power/Home | Up / Down / Enter / Esc |
+| USB OTG host | no | J5 driver targets SM5703; rossa has RT5033 + SM5504 |
+| CPU cores | 1 | same as J5 |
+
+What differs from the J5 targets (all selected by `Devices/rossa.dsc`):
+
+- **RAM**: `PcdSystemMemorySize = 0x40000000`. The UEFI stack/HOB region is
+  taken from the top of that size, so the J5's 1.5 GB value would put it in
+  memory that doesn't exist on rossa. The memory map ends at `0xC0000000` and
+  uses rossa's Samsung TZ carve-out (`0x85A00000+0x600000`, mainline
+  `msm8916-samsung-fortuna-common.dtsi`) and its larger modem region
+  (`0x86800000+0x5800000`), all inside the reserved `0x86700000-0x8D300000`.
+- **Display**: stride comes from `PcdMipiFrameBufferWidth` instead of a
+  hard-coded 720, the pipe that the bootloader staged is detected, and its
+  scanout address is set to `PcdMipiFrameBufferAddress`. Samsung's bootloader
+  keeps its splash at `0x83000000`, which is ordinary RAM here.
+- **Touch**: rossa's Imagis IST3038 speaks the older IST30xx protocol
+  (status and coordinates streamed from register `0x20`, Samsung
+  `imagis_core3` / mainline `imagis,ist3038`). `Ist3038cTouchDxe` now probes
+  the chip id and picks the protocol; `PcdTouchImagisLegacy` only sets the
+  probe order. Pins: SDA 18, SCL 19, INT 13, VDD enable 73, address `0x50`.
+- **Keys**: `GenericKeypadDeviceDxe`/`KeypadDxe` are in the rossa FV, with
+  Vol+ on GPIO 107, Home on GPIO 109, Vol- on PM8916 RESIN and Power on
+  KPDPWR (PCDs `PcdKeypad*`, all off for the J5 targets).
+- **DTB**: `ImageResources/rossa.dts`, msm-id `0xce`, board-id
+  `0xce08ff01` revisions 0-15.
+- **SMBIOS**: vendor/product come from the device PCDs, memory size from
+  `PcdSystemMemorySize`.
+- The Windows `J5TS0001` touch entry in the shared DSDT is for the J5's
+  IST3038C driver and won't work with rossa's touch controller.
+
 ## Status
 
 | | UEFI | Windows PE |

@@ -41,6 +41,7 @@
   gQcomTokenSpaceGuid.PcdTouchInvertX
   gQcomTokenSpaceGuid.PcdTouchInvertY
   gQcomTokenSpaceGuid.PcdTouchSwapXY
+  gQcomTokenSpaceGuid.PcdTouchImagisLegacy
 
 [Depex]
   gQcomGpioTlmmProtocolGuid

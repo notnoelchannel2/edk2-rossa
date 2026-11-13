@@ -158,6 +158,16 @@
   gQcomTokenSpaceGuid.PcdMuicI2cSclGpio|0xFFFFFFFF|UINT32|0x00000315
   gQcomTokenSpaceGuid.PcdMuicI2cAddress|0x25|UINT8|0x00000316
 
+  # Imagis touch: TRUE = expect the legacy IST30xx/IST3038 protocol (rossa),
+  # FALSE = IST3038C protocol (J5 2016). The chip id is still probed first.
+  gQcomTokenSpaceGuid.PcdTouchImagisLegacy|FALSE|BOOLEAN|0x00000317
+
+  # Physical keys (KeypadDeviceImplLib). 0xFFFFFFFF / FALSE = not present.
+  gQcomTokenSpaceGuid.PcdKeypadVolumeUpGpio|0xFFFFFFFF|UINT32|0x00000320
+  gQcomTokenSpaceGuid.PcdKeypadHomeGpio|0xFFFFFFFF|UINT32|0x00000321
+  gQcomTokenSpaceGuid.PcdKeypadVolumeDownResin|FALSE|BOOLEAN|0x00000322
+  gQcomTokenSpaceGuid.PcdKeypadPowerPon|FALSE|BOOLEAN|0x00000323
+
 [PcdsFeatureFlag.common]
   # MMCHSDxe
   gQcomTokenSpaceGuid.PcdMmcAdmSupport|FALSE|BOOLEAN|0x00010001

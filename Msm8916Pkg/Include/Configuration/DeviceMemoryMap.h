@@ -57,6 +57,15 @@ typedef struct {
 #define UNCACHED_UNBUFFERED ARM_MEMORY_REGION_ATTRIBUTE_UNCACHED_UNBUFFERED
 #define UNCACHED_UNBUFFERED_XN ARM_MEMORY_REGION_ATTRIBUTE_UNCACHED_UNBUFFERED
 
+/*
+ * The region table is per device. Select it with a compiler define set in
+ * the device .dsc ([BuildOptions]); the J5 2015/2016 table is the default.
+ *
+ *   MSM8916_DEVICE_ROSSA   Samsung Galaxy Core Prime LTE (SM-G360F), 1 GB
+ */
+#if defined(MSM8916_DEVICE_ROSSA)
+#include <Configuration/DeviceMemoryMapRossa.h>
+#else
 static ARM_MEMORY_REGION_DESCRIPTOR_EX gDeviceMemoryDescriptorEx[] = {
     /* Name               Address     Length      HobOption        ResourceAttribute    ArmAttributes
                                                           ResourceType          MemoryType */
@@ -105,5 +114,7 @@ static ARM_MEMORY_REGION_DESCRIPTOR_EX gDeviceMemoryDescriptorEx[] = {
 
     /* Terminator for MMU */
     {"Terminator", 0, 0, 0, 0, 0, 0, 0}};
+
+#endif /* device selection */
 
 #endif
