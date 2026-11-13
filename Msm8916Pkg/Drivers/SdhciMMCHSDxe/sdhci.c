@@ -880,9 +880,17 @@ uint32_t sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
       __func__, cmd->cmd_index, cmd->argument, cmd->resp[0], cmd->resp[1],
       cmd->resp[2], cmd->resp[3]);
 err:
-  /* Free the scatter/gather list */
-  if (sg_list && sg_pages > 0)
-    FreePages(sg_list, sg_pages);
+  /*
+   * Free the scatter/gather list. After a failed transfer the ADMA engine is
+   * not guaranteed to be idle even after the data line reset, so leak the
+   * descriptor page instead of letting the controller follow a reused one.
+   */
+  if (sg_list && sg_pages > 0) {
+    if (ret == 0)
+      FreePages(sg_list, sg_pages);
+    else
+      REG_WRITE32(host, 0, SDHCI_ADM_ADDR_REG);
+  }
 
   return ret;
 }

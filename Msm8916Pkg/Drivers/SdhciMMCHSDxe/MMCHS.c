@@ -53,6 +53,8 @@ MmcSelfTest(struct mmc_device *dev)
 {
   UINT32  Blocks = MMC_SELFTEST_BLOCKS;
   UINT32  Size;
+  UINTN   Pages;
+  VOID   *Base;
   VOID   *Buffer;
   BOOLEAN Ok = FALSE;
 
@@ -66,12 +68,15 @@ MmcSelfTest(struct mmc_device *dev)
     return FALSE;
   }
 
-  Size   = Blocks * dev->card.block_size;
-  Buffer = AllocatePages(EFI_SIZE_TO_PAGES(Size));
-  if (Buffer == NULL) {
+  /* One guard page on each side in case a failing transfer overruns */
+  Size  = Blocks * dev->card.block_size;
+  Pages = EFI_SIZE_TO_PAGES(Size) + 2;
+  Base  = AllocatePages(Pages);
+  if (Base == NULL) {
     /* Can't test, don't hold the device back because of it */
     return TRUE;
   }
+  Buffer = (UINT8 *)Base + EFI_PAGE_SIZE;
 
   arch_clean_invalidate_cache_range((addr_t)Buffer, Size);
   if (mmc_sdhci_read(dev, Buffer, 0, 1) == 0) {
@@ -79,7 +84,12 @@ MmcSelfTest(struct mmc_device *dev)
     Ok = (mmc_sdhci_read(dev, Buffer, 0, Blocks) == 0);
   }
 
-  FreePages(Buffer, EFI_SIZE_TO_PAGES(Size));
+  /*
+   * After a failed transfer the controller may still write into the buffer
+   * (DMA isn't guaranteed to be stopped), so only hand it back on success.
+   */
+  if (Ok)
+    FreePages(Base, Pages);
   return Ok;
 }
 
@@ -104,7 +114,10 @@ MmcInitWithFallback(struct mmc_config_data *config)
       }
       DEBUG((EFI_D_ERROR, "mmc slot %u: read test failed in %a mode\n",
              cfg.slot, MmcModeName(&cfg)));
-      free(dev);
+      /*
+       * Deliberately not freed: the controller's power IRQ handler and a
+       * possibly still running DMA may reference it. A few KB, once.
+       */
     }
 
     if (!MmcDegradeConfig(&cfg)) {
@@ -139,11 +152,10 @@ MmcRecover(BIO_INSTANCE *Instance)
   if (dev->card.capacity != Instance->MmcDev->card.capacity ||
       dev->card.block_size != Instance->MmcDev->card.block_size) {
     DEBUG((EFI_D_ERROR, "mmc slot %u: card changed during recovery\n", cfg.slot));
-    free(dev);
     return 1;
   }
 
-  free(Instance->MmcDev);
+  /* The old device is leaked on purpose, see MmcInitWithFallback */
   Instance->MmcDev = dev;
   return 0;
 }
@@ -350,10 +362,11 @@ mmc_read(BIO_INSTANCE *Instance, UINT64 data_addr, UINT32 *out, UINT32 data_len)
     return 1;
 
   ret = mmc_read_aligned(Instance, data_addr, bounce, data_len);
-  if (ret == 0)
+  if (ret == 0) {
     CopyMem(out, bounce, data_len);
-
-  FreePages(bounce, pages);
+    FreePages(bounce, pages);
+  }
+  /* else: leaked on purpose, a failed DMA may still land in it */
   return ret;
 }
 
