@@ -17,6 +17,7 @@
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
+#include <Library/DxeServicesTableLib.h>
 #include <Library/ResetSystemLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeLib.h>
@@ -110,7 +111,9 @@ PsHoldReset (
   }
 
   /* Drop PS_HOLD: the PMIC now does what PON_PS_HOLD_RESET_CTL says */
-  MmioWrite32 (mPsHold, 0);
+  if (mPsHold != 0) {
+    MmioWrite32 (mPsHold, 0);
+  }
 
   for ( ; ; ) {
     CpuDeadLoop ();
@@ -199,6 +202,48 @@ VirtualAddressChange (
   }
 }
 
+/*
+ * The MMIO this library touches after ExitBootServices must be in the UEFI
+ * memory map with EFI_MEMORY_RUNTIME, or the OS doesn't map it and
+ * EfiConvertPointer fails (the "Peripherals" region is plain reserved
+ * memory). Without this, Windows' reboot wrote to address 0 and crashed
+ * with KMODE_EXCEPTION_NOT_HANDLED. 64 KB granules, as AArch64 requires.
+ */
+STATIC
+VOID
+MarkRuntimeMmio (
+  IN UINTN  Base,
+  IN UINTN  Length
+  )
+{
+  EFI_GCD_MEMORY_SPACE_DESCRIPTOR  Desc;
+  EFI_STATUS                       Status;
+  UINTN                            End = ALIGN_VALUE (Base + Length, SIZE_64KB);
+
+  Base   &= ~((UINTN)SIZE_64KB - 1);
+  Length  = End - Base;
+
+  Status = gDS->GetMemorySpaceDescriptor (Base, &Desc);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Msm8916ResetSystemLib: no GCD entry for 0x%lx: %r\n", (UINT64)Base, Status));
+    return;
+  }
+  if (Desc.GcdMemoryType == EfiGcdMemoryTypeNonExistent) {
+    Status = gDS->AddMemorySpace (EfiGcdMemoryTypeMemoryMappedIo, Base, Length, EFI_MEMORY_UC | EFI_MEMORY_RUNTIME);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Msm8916ResetSystemLib: AddMemorySpace 0x%lx: %r\n", (UINT64)Base, Status));
+      return;
+    }
+  } else {
+    Status = gDS->SetMemorySpaceCapabilities (Base, Length, Desc.Capabilities | EFI_MEMORY_UC | EFI_MEMORY_RUNTIME);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Msm8916ResetSystemLib: capabilities 0x%lx: %r\n", (UINT64)Base, Status));
+    }
+  }
+  Status = gDS->SetMemorySpaceAttributes (Base, Length, EFI_MEMORY_UC | EFI_MEMORY_RUNTIME);
+  DEBUG ((DEBUG_INFO, "Msm8916ResetSystemLib: runtime MMIO 0x%lx+0x%lx: %r\n", (UINT64)Base, (UINT64)Length, Status));
+}
+
 EFI_STATUS
 EFIAPI
 Msm8916ResetSystemLibConstructor (
@@ -223,6 +268,11 @@ Msm8916ResetSystemLibConstructor (
         break;
       }
     }
+  }
+
+  MarkRuntimeMmio (mPsHold, 4);
+  if (mPonFound) {
+    MarkRuntimeMmio (mPonChannel, CHNL_STRIDE);
   }
 
   DEBUG ((DEBUG_INFO, "Msm8916ResetSystemLib: PON channel %a (0x%lx)\n",

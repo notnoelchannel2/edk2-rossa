@@ -27,6 +27,7 @@
 [LibraryClasses]
   BaseLib
   DebugLib
+  DxeServicesTableLib
   IoLib
   UefiBootServicesTableLib
   UefiRuntimeLib
