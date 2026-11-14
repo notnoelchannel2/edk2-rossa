@@ -6,9 +6,9 @@ DefinitionBlock("DSDT_ROSSA.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 		/*
 		 * 4 CPU cores. MpParkDxe powers up CPU1-3, parks them for the MP
 		 * Parking Protocol and puts only the cores that arrived in the MADT;
-		 * it leaves that same mask (bit n = CPUn) at 0x80300F00 for _STA.
+		 * it leaves that same mask (bit n = CPUn) at 0x80305000 for _STA.
 		 */
-		OperationRegion (MPPK, SystemMemory, 0x80300F00, 4)
+		OperationRegion (MPPK, SystemMemory, 0x80305000, 4)
 		Field (MPPK, DWordAcc, NoLock, Preserve)
 		{
 			CPUM, 32

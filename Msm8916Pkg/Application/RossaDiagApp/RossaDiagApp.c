@@ -72,9 +72,9 @@ ShowCpu (
          ((Typer & 0x1F) + 1) * 32, MmioRead32 (GicD + GICD_IIDR), MmioRead32 (GicC + GICC_IIDR));
   Print (L"RAM   %lu MB\n", PcdGet64 (PcdSystemMemorySize) >> 20);
 
-  /* MpParkDxe leaves the mask of parked cores at 0x80300F00 */
+  /* MpParkDxe leaves the mask of parked cores at 0x80305000 */
   {
-    UINT32 Mask = MmioRead32 (0x80300F00);
+    UINT32 Mask = MmioRead32 (0x80305000);
     UINTN  N    = 0;
     UINTN  I;
     for (I = 0; I < 4; I++) {

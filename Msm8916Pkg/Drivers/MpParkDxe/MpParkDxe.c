@@ -11,7 +11,7 @@
  *
  * Only the cores that arrive are published: at ReadyToBoot the MADT is
  * replaced by one with a GICC (and parking mailbox) per live core, and the
- * DSDT's CPU devices read the live-core mask at MPPARK_BASE + 0xF00. If
+ * DSDT's CPU devices read the live-core mask at MPPARK_BASE + 0x5000. If
  * anything fails, Windows simply keeps seeing one core (as before).
  */
 #include <Uefi.h>
@@ -33,7 +33,7 @@
 
 #define MPPARK_BASE          0x80300000UL
 #define MPPARK_MBOX(n)       (MPPARK_BASE + 0x1000 * ((n) + 1))
-#define MPPARK_CPU_MASK      (MPPARK_BASE + 0xF00)   /* read by the DSDT */
+#define MPPARK_CPU_MASK      (MPPARK_BASE + 0x5000)  /* read by the DSDT */
 #define MPPARK_MAGIC         0x5041524BU             /* 'PARK' */
 #define MBOX_PROCESSOR_ID    0x000
 #define MBOX_JUMP_ADDRESS    0x008
@@ -324,11 +324,17 @@ BringUpCores (
       State = WaitChange(Cpu, CoreA32, 200);
     }
 
-    DEBUG((EFI_D_WARN, "MpPark: CPU%u %a (PWR_CTL 0x%x, marks %x %x %x, scm 0x%x)\n", Cpu, Names[State],
-           MmioRead32(Acc + CPU_PWR_CTL), MmioRead32(MPPARK_MBOX(Cpu) + MBOX_A32),
-           MmioRead32(MPPARK_MBOX(Cpu) + MBOX_A64), MmioRead32(MPPARK_MBOX(Cpu) + MBOX_FW_ALIVE),
-           MmioRead32(MPPARK_MBOX(Cpu) + MBOX_SCM_RESULT)));
-
+    {
+      UINTN Mb = MPPARK_MBOX(Cpu);
+      DEBUG((EFI_D_WARN, "MpPark: CPU%u %a, step %u, EL%u (PWR_CTL 0x%x, scm 0x%x)\n", Cpu, Names[State],
+             MmioRead32(Mb + 0x818), MmioRead32(Mb + 0x840) >> 2, MmioRead32(Acc + CPU_PWR_CTL),
+             MmioRead32(Mb + MBOX_SCM_RESULT)));
+      if (MmioRead32(Mb + 0x81C) == 0x21435845) {
+        DEBUG((EFI_D_WARN, "MpPark: CPU%u FAULT vec %u EL%u ESR 0x%lx ELR 0x%lx FAR 0x%lx (now polling)\n", Cpu,
+               MmioRead32(Mb + 0x848), MmioRead32(Mb + 0x844) >> 2, MmioRead64(Mb + 0x850),
+               MmioRead64(Mb + 0x858), MmioRead64(Mb + 0x860)));
+      }
+    }
     if (State == CoreParked) {
       mLiveMask |= 1U << Cpu;
     } else if (State == CoreSilent && !LegacyTried) {
