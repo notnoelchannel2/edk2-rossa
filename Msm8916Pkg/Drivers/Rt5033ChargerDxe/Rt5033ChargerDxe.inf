@@ -1,0 +1,31 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = Rt5033ChargerDxe
+  FILE_GUID                      = 9E4B1C7D-2A3F-4B86-8D50-C1F7E2A49B36
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = Rt5033ChargerDxeInitialize
+
+[Sources.common]
+  Rt5033ChargerDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  Msm8916Pkg/Msm8916Pkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  BaseMemoryLib
+  DebugLib
+  TimerLib
+  GpioTlmmLib
+  GpioI2cLib
+
+[Protocols]
+  gRt5033BatteryProtocolGuid
+
+[Depex]
+  gQcomGpioTlmmProtocolGuid

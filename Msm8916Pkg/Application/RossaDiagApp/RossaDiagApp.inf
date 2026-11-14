@@ -31,6 +31,7 @@
   gEfiGraphicsOutputProtocolGuid
   gEfiAbsolutePointerProtocolGuid
   gQcomPm8x41ProtocolGuid
+  gRt5033BatteryProtocolGuid
 
 [Pcd]
   gArmTokenSpaceGuid.PcdGicDistributorBase

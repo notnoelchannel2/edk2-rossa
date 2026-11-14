@@ -28,6 +28,7 @@
 #include <Protocol/BlockIo.h>
 #include <Protocol/GraphicsOutput.h>
 #include <Protocol/QcomPm8x41.h>
+#include <Protocol/Rt5033Battery.h>
 
 #define GICD_TYPER      0x004
 #define GICD_IIDR       0x008
@@ -215,6 +216,36 @@ KeyTest (
   }
 }
 
+STATIC VOID
+ShowBattery (
+  VOID
+  )
+{
+  STATIC CONST CHAR16      *States[] = { L"discharging", L"full", L"charging", L"not charging" };
+  RT5033_BATTERY_PROTOCOL  *Batt;
+  RT5033_BATTERY_STATUS    St;
+
+  if (EFI_ERROR (gBS->LocateProtocol (&gRt5033BatteryProtocolGuid, NULL, (VOID **)&Batt))) {
+    Print (L"Battery: RT5033 driver not loaded (no answer from charger/gauge?)\n");
+    return;
+  }
+  Batt->GetStatus (Batt, &St);
+  if (St.GaugeFound) {
+    Print (L"Battery: %u%%, %u mV (avg %u, ocv %u)%s\n", St.Capacity, St.VoltageMv, St.AvgVoltageMv,
+           St.OcvMv, St.BatteryPresent ? L"" : L", not detected");
+  } else {
+    Print (L"Battery: fuel gauge not answering (i2c 14/15 @0x35)\n");
+  }
+  if (St.ChargerFound) {
+    Print (L"Charger: %s%s%s, id 0x%02x, regs %02x %02x %02x %02x %02x %02x %02x\n",
+           States[St.State & 3], St.State == Rt5033ChgCharging ? (St.FastCharge ? L" (fast)" : L" (pre)") : L"",
+           St.SafetyStop ? L", STOPPED: over-voltage" : L"", St.ChargerId,
+           St.Regs[0], St.Regs[1], St.Regs[2], St.Regs[3], St.Regs[4], St.Regs[5], St.Regs[6]);
+  } else {
+    Print (L"Charger: not answering (i2c 22/23 @0x34)\n");
+  }
+}
+
 EFI_STATUS
 EFIAPI
 RossaDiagMain (
@@ -229,6 +260,7 @@ RossaDiagMain (
   ShowPmic ();
   ShowDisplay ();
   ShowTouch ();
+  ShowBattery ();
   ShowStorage ();
 
   KeyTest ();

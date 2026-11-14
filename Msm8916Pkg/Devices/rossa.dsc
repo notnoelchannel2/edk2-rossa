@@ -88,5 +88,6 @@
   # GraphicsConsoleDxe with small screen support (replaces MdeModulePkg's in rossa.fdf)
   Msm8916Pkg/Drivers/GraphicsConsoleDxe/GraphicsConsoleDxe.inf
   Msm8916Pkg/Drivers/Ist3038cTouchDxe/Ist3038cTouchDxe.inf
+  Msm8916Pkg/Drivers/Rt5033ChargerDxe/Rt5033ChargerDxe.inf
   Msm8916Pkg/Application/TouchTestApp/TouchTestApp.inf
   Msm8916Pkg/Application/RossaDiagApp/RossaDiagApp.inf
