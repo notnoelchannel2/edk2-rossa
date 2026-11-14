@@ -255,11 +255,20 @@ ShowSdCaps (
   VOID
   )
 {
-  UINT32 C0 = MmioRead32 (0x07864940);
-  UINT32 C1 = MmioRead32 (0x07864944);
+  UINT32 C0   = MmioRead32 (0x07864940);
+  UINT32 C1   = MmioRead32 (0x07864944);
+  UINT8  Hc1  = MmioRead8 (0x07864928);
+  UINT16 Clk  = MmioRead16 (0x0786492C);
+  UINT16 Hc2  = MmioRead16 (0x0786493E);
+  UINT32 Div  = ((Clk >> 8) & 0xFF) | (((Clk >> 6) & 0x3) << 8);
+  UINT32 Base = (C0 >> 8) & 0xFF;
+  UINT32 Khz  = (Div == 0) ? Base * 1000 : (Base * 1000) / (2 * Div);
 
-  Print (L"SD caps %08x/%08x: UHS %s, 1.8V %s (both must be off for Windows)\n", C0, C1,
-         (C1 & 0x7) ? L"ON" : L"off", (C0 & BIT26) ? L"ON" : L"off");
+  Print (L"SD caps %08x/%08x: HS %s, 1.8V %s (UHS bits %s, ignored)\n", C0, C1,
+         (C0 & BIT21) ? L"ON" : L"off", (C0 & BIT26) ? L"ON" : L"off",
+         (C1 & 0x7) ? L"on" : L"off");
+  Print (L"SD firmware bus: %u kHz, %u-bit, HS %s, UHS mode %u\n", Khz,
+         (Hc1 & BIT1) ? 4 : 1, (Hc1 & BIT2) ? L"on" : L"off", Hc2 & 0x7);
 }
 
 STATIC VOID

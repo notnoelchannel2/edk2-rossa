@@ -231,6 +231,7 @@ typedef enum {
 #define SDHCI_3_3_VOL_MASK                        0x01000000
 #define SDHCI_3_0_VOL_MASK                        0x02000000
 #define SDHCI_1_8_VOL_MASK                        0x04000000
+#define SDHCI_CAPS_HIGH_SPEED                     0x00200000
 
 /*
  * Bus width related macros
