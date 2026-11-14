@@ -197,6 +197,8 @@ KeyName (
   return L"other key";
 }
 
+STATIC VOID Buzz (IN UINTN Ms);
+
 STATIC VOID
 KeyTest (
   VOID
@@ -206,7 +208,7 @@ KeyTest (
   UINTN         Index;
   BOOLEAN       HomeOnce = FALSE;
 
-  Print (L"\nKey test: press keys. Home twice = exit.\n");
+  Print (L"\nKey test: press keys (each one buzzes). Home twice = exit.\n");
   gST->ConIn->Reset (gST->ConIn, FALSE);
 
   for ( ; ; ) {
@@ -216,6 +218,7 @@ KeyTest (
     }
 
     Print (L"  %s\n", KeyName (&Key));
+    Buzz (80);
 
     if (Key.ScanCode == SCAN_ESC) {
       if (HomeOnce) {
@@ -226,6 +229,34 @@ KeyTest (
       HomeOnce = FALSE;
     }
   }
+}
+
+/* Vibration motor: GPIO72 high = on (Samsung msm_vibrator.c, mainline regulator-haptic) */
+#define MOTOR_TLMM_CFG     0x01048000
+#define MOTOR_TLMM_IN_OUT  0x01048004
+
+STATIC VOID
+Buzz (
+  IN UINTN  Ms
+  )
+{
+  UINT32 Cfg = MmioRead32 (MOTOR_TLMM_CFG);
+
+  /* GPIO function, no pull, output enable; keep drive strength */
+  MmioWrite32 (MOTOR_TLMM_CFG, (Cfg & ~0x3Fu) | BIT9);
+  MmioWrite32 (MOTOR_TLMM_IN_OUT, BIT1);
+  gBS->Stall (Ms * 1000);
+  MmioWrite32 (MOTOR_TLMM_IN_OUT, 0);
+}
+
+STATIC VOID
+ShowMotor (
+  VOID
+  )
+{
+  Print (L"Motor GPIO72 cfg %08x, buzzing 500 ms...", MmioRead32 (MOTOR_TLMM_CFG));
+  Buzz (500);
+  Print (L" done (cfg now %08x)\n", MmioRead32 (MOTOR_TLMM_CFG));
 }
 
 STATIC VOID
@@ -273,6 +304,7 @@ RossaDiagMain (
   ShowDisplay ();
   ShowTouch ();
   ShowBattery ();
+  ShowMotor ();
   ShowStorage ();
 
   KeyTest ();
