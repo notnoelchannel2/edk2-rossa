@@ -10,6 +10,14 @@
  *
  * WFE is woken by the generic timer event stream (~every 0.1 ms), so the
  * cores need no GIC setup and the OS needs no SEV.
+ *
+ * The first word is valid in both instruction sets: in AArch64 it is a
+ * harmless TST, in AArch32 a branch to Park32. Some TrustZone builds start
+ * secondaries in AArch32 whatever we ask; Park32 then reports 'A32!' at
+ * +0x804, waits for the firmware's 'GO64' at +0x810 and asks TZ (the same
+ * SCM "milestone" call lk2nd uses to boot 64-bit kernels) to restart it in
+ * AArch64 at ApParkStart, using the parameter block at 0x80306000+0x1000*n.
+ * Markers: +0x808 'A64 ' (entered AArch64), +0x80c 'FAIL', +0x814 SCM result.
  */
   .text
   .align 3
@@ -17,12 +25,17 @@
   .global ApParkEnd
 
 ApParkStart:
+  .word 0xEA000000 | (((Park32 - ApParkStart - 8) >> 2) & 0xFFFFFF)
   msr   daifset, #0xf
   mrs   x0, mpidr_el1
   and   x0, x0, #0xff              // Aff0: CPU 0-3
   adr   x1, ApParkStart
   add   x1, x1, #0x1000
   add   x1, x1, x0, lsl #12        // our mailbox
+  movz  w2, #0x3641                // 'A64 ' (0x20343641)
+  movk  w2, #0x2034, lsl #16
+  str   w2, [x1, #0x808]
+  dsb   sy
 
   mrs   x2, CurrentEL
   cmp   x2, #(2 << 2)
@@ -55,5 +68,44 @@ ApParkStart:
   isb
   mov   x0, x1                     // mailbox address, for the OS's benefit
   br    x4
+
+  .align 3
+Park32:                            // AArch32: ApPark32.s, assembled with
+                                   // llvm-mc --triple=armv7a -mattr=+trustzone
+  // 132 bytes
+  .word 0xf10c01c0
+  .word 0xee108fb0
+  .word 0xe20880ff
+  .word 0xe3017000
+  .word 0xe3487030
+  .word 0xe0877608
+  .word 0xe3032341
+  .word 0xe3422132
+  .word 0xe5872804
+  .word 0xf57ff04f
+  .word 0xe3043f47
+  .word 0xe3433436
+  .word 0xe5972810
+  .word 0xe1520003
+  .word 0x1afffffc
+  .word 0xe300010f
+  .word 0xe3400200
+  .word 0xe3a01012
+  .word 0xe3062000
+  .word 0xe3482030
+  .word 0xe0822608
+  .word 0xe3a03050
+  .word 0xe3a04000
+  .word 0xe3a05000
+  .word 0xe3a06000
+  .word 0xe1600070
+  .word 0xe5870814
+  .word 0xe3042146
+  .word 0xe3442c49
+  .word 0xe587280c
+  .word 0xf57ff04f
+  .word 0xe320f002
+  .word 0xeafffffd
+
   .align 3
 ApParkEnd:

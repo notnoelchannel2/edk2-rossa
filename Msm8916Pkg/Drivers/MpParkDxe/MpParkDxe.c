@@ -184,21 +184,87 @@ PowerUpCore (
   ArmDataSynchronizationBarrier();
 }
 
+#define MAGIC_A32            0x21323341U   /* 'A32!' at +0x804: started in AArch32 */
+#define MAGIC_A64            0x20343641U   /* 'A64 ' at +0x808: entered AArch64 */
+#define MAGIC_FAIL           0x4C494146U   /* 'FAIL' at +0x80C: 32->64 switch refused */
+#define MAGIC_GO64           0x34364F47U   /* 'GO64' at +0x810: firmware says switch now */
+#define MBOX_A32             0x804
+#define MBOX_A64             0x808
+#define MBOX_FAIL            0x80C
+#define MBOX_GO64            0x810
+#define MBOX_SCM_RESULT      0x814
+#define PARAM_BLOCK(n)       (MPPARK_BASE + 0x6000 + 0x1000 * (n))   /* el1_system_param */
+
+typedef enum {
+  CoreSilent,      /* never ran our code */
+  CoreA32,         /* in Park32, waiting for GO64 */
+  CoreA64,         /* entered AArch64 but did not park */
+  CoreParked,
+  CoreSwitchFailed /* TZ refused the 32->64 switch */
+} CORE_STATE;
+
 STATIC
-BOOLEAN
-WaitAlive (
+CORE_STATE
+CoreState (
   IN UINTN  Cpu
   )
 {
-  UINTN Us;
+  UINTN Mbox = MPPARK_MBOX(Cpu);
 
-  for (Us = 0; Us < 100000; Us += 100) {
-    if (MmioRead32(MPPARK_MBOX(Cpu) + MBOX_FW_ALIVE) == MPPARK_MAGIC) {
-      return TRUE;
+  if (MmioRead32(Mbox + MBOX_FW_ALIVE) == MPPARK_MAGIC) {
+    return CoreParked;
+  }
+  if (MmioRead32(Mbox + MBOX_FAIL) == MAGIC_FAIL) {
+    return CoreSwitchFailed;
+  }
+  if (MmioRead32(Mbox + MBOX_A64) == MAGIC_A64) {
+    return CoreA64;
+  }
+  if (MmioRead32(Mbox + MBOX_A32) == MAGIC_A32) {
+    return CoreA32;
+  }
+  return CoreSilent;
+}
+
+/* Wait until the core leaves state From (or Ms milliseconds pass) */
+STATIC
+CORE_STATE
+WaitChange (
+  IN UINTN       Cpu,
+  IN CORE_STATE  From,
+  IN UINTN       Ms
+  )
+{
+  CORE_STATE State = From;
+  UINTN      Us;
+
+  for (Us = 0; Us < Ms * 1000; Us += 100) {
+    State = CoreState(Cpu);
+    if (State != From && State != CoreA64) {
+      return State;
     }
     MicroSecondDelay(100);
   }
-  return FALSE;
+  return CoreState(Cpu);
+}
+
+/* Old SCM convention, as the Samsung 32-bit kernel uses: cold boot in AArch32 */
+STATIC
+UINTN
+ScmLegacySetBootAddr (
+  IN UINTN  Addr
+  )
+{
+  ARM_SMC_ARGS  Args;
+  STATIC UINT32 Context;
+
+  ZeroMem(&Args, sizeof(Args));
+  Args.Arg0 = 0x00401222;            /* SCM_ATOMIC(SVC_BOOT, SET_ADDR, 2 args) */
+  Args.Arg1 = (UINTN)&Context;
+  Args.Arg2 = BIT0 | BIT3 | BIT5;    /* cold boot CPU1, CPU2, CPU3 */
+  Args.Arg3 = Addr;
+  ArmCallSmc(&Args);
+  return (UINT32)Args.Arg0;
 }
 
 STATIC
@@ -207,39 +273,70 @@ BringUpCores (
   VOID
   )
 {
-  UINTN Cpu;
-  UINTN Size = (UINTN)(ApParkEnd - ApParkStart);
+  STATIC CONST CHAR8 *Names[] = { "never ran our code", "started in AArch32", "entered AArch64 but did not park",
+                                  "parked", "TZ refused the AArch32->AArch64 switch" };
+  UINTN       Cpu;
+  UINTN       Size = (UINTN)(ApParkEnd - ApParkStart);
+  BOOLEAN     LegacyTried = FALSE;
+  UINTN       LegacyRet;
+  BOOLEAN     McOk;
+  CORE_STATE  State;
 
   /* Region is mapped uncached; still clean so the cores see it with MMU off */
+  SetMem((VOID *)MPPARK_BASE, 0xA000, 0);
   for (Cpu = 0; Cpu < CPU_COUNT; Cpu++) {
-    SetMem((VOID *)MPPARK_MBOX(Cpu), 0x1000, 0);
     MmioWrite32(MPPARK_MBOX(Cpu) + MBOX_PROCESSOR_ID, 0xFFFFFFFF);
+    /* el1_system_param: x0-x8 = 0, el1_elr (offset 72) = AArch64 entry */
+    MmioWrite64(PARAM_BLOCK(Cpu) + 72, MPPARK_BASE);
   }
-  SetMem((VOID *)MPPARK_BASE, 0x1000, 0);
   CopyMem((VOID *)MPPARK_BASE, ApParkStart, Size);
   MmioWrite32(MPPARK_CPU_MASK, mLiveMask);
-  WriteBackInvalidateDataCacheRange((VOID *)MPPARK_BASE, 0x1000 * (CPU_COUNT + 1));
+  WriteBackInvalidateDataCacheRange((VOID *)MPPARK_BASE, 0xA000);
   InvalidateInstructionCacheRange((VOID *)MPPARK_BASE, Size);
 
-  if (!ScmBootAddrAvailable()) {
-    DEBUG((EFI_D_WARN, "MpPark: TZ cannot cold-boot AArch64 cores, staying on 1 core\n"));
-    return;
+  McOk = ScmBootAddrAvailable();
+  DEBUG((EFI_D_WARN, "MpPark: ARMv8 SCM BOOT_SET_ADDR_MC %a\n", McOk ? "available" : "NOT available"));
+  if (McOk) {
+    McOk = !EFI_ERROR(ScmSetColdBootAddr(MPPARK_BASE));
+    DEBUG((EFI_D_WARN, "MpPark: AArch64 cold-boot address %a\n", McOk ? "set" : "refused"));
   }
-  if (EFI_ERROR(ScmSetColdBootAddr(MPPARK_BASE))) {
-    return;
+  if (!McOk) {
+    DEBUG((EFI_D_WARN, "MpPark: trying the legacy SCM call (AArch32 cold boot)...\n"));
+    LegacyRet = ScmLegacySetBootAddr(MPPARK_BASE);
+    DEBUG((EFI_D_WARN, "MpPark: legacy SET_ADDR returned 0x%x\n", LegacyRet));
+    LegacyTried = TRUE;
   }
 
   for (Cpu = 1; Cpu < CPU_COUNT; Cpu++) {
-    if (MmioRead32(mAccBase[Cpu] + CPU_PWR_CTL) & CPU_PWR_CTL_CORE_PWRD_UP) {
+    UINTN Acc = mAccBase[Cpu];
+
+    if (MmioRead32(Acc + CPU_PWR_CTL) & CPU_PWR_CTL_CORE_PWRD_UP) {
       DEBUG((EFI_D_WARN, "MpPark: CPU%u already powered (by the bootloader?), skipping\n", Cpu));
       continue;
     }
-    PowerUpCore(mAccBase[Cpu]);
-    if (WaitAlive(Cpu)) {
+    PowerUpCore(Acc);
+    State = WaitChange(Cpu, CoreSilent, 100);
+
+    if (State == CoreA32) {
+      DEBUG((EFI_D_WARN, "MpPark: CPU%u started in AArch32, asking TZ to switch it...\n", Cpu));
+      MmioWrite32(MPPARK_MBOX(Cpu) + MBOX_GO64, MAGIC_GO64);
+      ArmDataSynchronizationBarrier();
+      State = WaitChange(Cpu, CoreA32, 200);
+    }
+
+    DEBUG((EFI_D_WARN, "MpPark: CPU%u %a (PWR_CTL 0x%x, marks %x %x %x, scm 0x%x)\n", Cpu, Names[State],
+           MmioRead32(Acc + CPU_PWR_CTL), MmioRead32(MPPARK_MBOX(Cpu) + MBOX_A32),
+           MmioRead32(MPPARK_MBOX(Cpu) + MBOX_A64), MmioRead32(MPPARK_MBOX(Cpu) + MBOX_FW_ALIVE),
+           MmioRead32(MPPARK_MBOX(Cpu) + MBOX_SCM_RESULT)));
+
+    if (State == CoreParked) {
       mLiveMask |= 1U << Cpu;
-      DEBUG((EFI_D_INFO, "MpPark: CPU%u parked at 0x%lx\n", Cpu, (UINT64)MPPARK_MBOX(Cpu)));
-    } else {
-      DEBUG((EFI_D_WARN, "MpPark: CPU%u did not arrive\n", Cpu));
+    } else if (State == CoreSilent && !LegacyTried) {
+      /* TZ ignored the AArch64 request outright: try the 32-bit kernel's way on the next core */
+      DEBUG((EFI_D_WARN, "MpPark: trying the legacy SCM call (AArch32 cold boot) for the next core...\n"));
+      LegacyRet = ScmLegacySetBootAddr(MPPARK_BASE);
+    DEBUG((EFI_D_WARN, "MpPark: legacy SET_ADDR returned 0x%x\n", LegacyRet));
+      LegacyTried = TRUE;
     }
   }
   MmioWrite32(MPPARK_CPU_MASK, mLiveMask);
