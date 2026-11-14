@@ -75,7 +75,7 @@ ApParkStart:
 
   mov   w2, #4                     // step 4: parked, WFE loop
   str   w2, [x1, #0x818]
-  movz  w2, #0x4b52                // 'PARK' (0x5041524B)
+  movz  w2, #0x524b                // PARK (0x5041524B)
   movk  w2, #0x5041, lsl #16
   str   w2, [x1, #0x800]
   dsb   sy
@@ -127,7 +127,7 @@ ApFault:                           // x9 = vector index
   movz  w2, #0x5845                // 'EXC!' (0x21435845)
   movk  w2, #0x2143, lsl #16
   str   w2, [x1, #0x81c]
-  movz  w2, #0x4b52                // still usable: 'PARK', polling loop
+  movz  w2, #0x524b                // still usable: PARK, polling loop
   movk  w2, #0x5041, lsl #16
   str   w2, [x1, #0x800]
   dsb   sy
