@@ -202,6 +202,7 @@ APRIORI DXE {
   INF Msm8916Pkg/Drivers/SdhciMMCHSDxe/SdhciMMCHS.inf
   INF Msm8916Pkg/Drivers/Ist3038cTouchDxe/Ist3038cTouchDxe.inf
   INF Msm8916Pkg/Drivers/Rt5033ChargerDxe/Rt5033ChargerDxe.inf
+  INF Msm8916Pkg/Drivers/MpParkDxe/MpParkDxe.inf
 
   #
   # Physical keys: Vol+/Home on TLMM, Vol-/Power on the PM8916 PON block

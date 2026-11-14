@@ -1,0 +1,43 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = MpParkDxe
+  FILE_GUID                      = 6C1E9A47-0B3D-4F82-A5C9-2E7D41B08F63
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = MpParkDxeInitialize
+
+[Sources.common]
+  MpParkDxe.c
+
+[Sources.AARCH64]
+  ApPark.S
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  ArmPkg/ArmPkg.dec
+  Msm8916Pkg/Msm8916Pkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  CacheMaintenanceLib
+  ArmLib
+  ArmSmcLib
+  IoLib
+  DebugLib
+  TimerLib
+
+[Protocols]
+  gEfiAcpiSdtProtocolGuid
+  gEfiAcpiTableProtocolGuid
+
+[Guids]
+  gEfiEventReadyToBootGuid
+
+[Depex]
+  TRUE

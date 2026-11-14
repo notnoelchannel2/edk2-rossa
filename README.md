@@ -18,9 +18,10 @@ image below (`--base 0x80000000 --kernel_offset 0x00080000 --pagesize 2048`).
 | Touchscreen (IST3038) | yes | legacy IST30xx protocol, auto-detected |
 | Keys | Vol+/Vol-/Power/Home | Up / Down / Enter / Esc |
 | USB OTG host | no | J5 driver targets SM5703; rossa has RT5033 + SM5504 |
-| CPU cores | 1 | same as J5 |
+| CPU cores | 4 (untested) | `MpParkDxe`: SCM cold-boot address + ACC power-up, cores parked for the ACPI MP Parking Protocol; MADT lists only cores that arrived |
+| Battery / charging | yes (untested) | `Rt5033ChargerDxe`: CV 4.35 V, 500 mA input, over-voltage stop; RossaDiag shows % and state |
 | Reset / power off | yes | PMIC PS_HOLD (no PSCI in Samsung's TrustZone) |
-| Windows PE touch + keyboard | yes | [rossa-winpe](https://github.com/notnoelchannel2/rossa-winpe): rossatouch, rossaosk |
+| Windows PE touch + keyboard + battery | yes | [rossa-winpe](https://github.com/notnoelchannel2/rossa-winpe): rossatouch, rossaosk, rossabatt (ACPI `RSBT0001`) |
 
 What differs from the J5 targets (all selected by `Devices/rossa.dsc`):
 

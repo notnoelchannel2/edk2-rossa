@@ -78,6 +78,10 @@
   gQcomTokenSpaceGuid.PcdKeypadPowerPon|TRUE
 !endif
 
+[PcdsFeatureFlag.common]
+  # MpParkDxe swaps the MADT through the ACPI SDT protocol
+  gEfiMdeModulePkgTokenSpaceGuid.PcdInstallAcpiSdtProtocol|TRUE
+
 [PcdsPatchableInModule.common]
   # 480 px is only 60 text columns, so there is no 80x25 mode: let the
   # console and ConSplitter pick the largest mode (60x42) instead.
@@ -89,5 +93,6 @@
   Msm8916Pkg/Drivers/GraphicsConsoleDxe/GraphicsConsoleDxe.inf
   Msm8916Pkg/Drivers/Ist3038cTouchDxe/Ist3038cTouchDxe.inf
   Msm8916Pkg/Drivers/Rt5033ChargerDxe/Rt5033ChargerDxe.inf
+  Msm8916Pkg/Drivers/MpParkDxe/MpParkDxe.inf
   Msm8916Pkg/Application/TouchTestApp/TouchTestApp.inf
   Msm8916Pkg/Application/RossaDiagApp/RossaDiagApp.inf

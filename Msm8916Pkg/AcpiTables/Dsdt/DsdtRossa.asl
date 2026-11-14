@@ -4,9 +4,16 @@ DefinitionBlock("DSDT_ROSSA.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 	Scope(\_SB_)
 	{
 		/*
-		 * 4 CPU cores, but only CPU0 is in the MADT until the firmware parks
-		 * the secondaries for the MP Parking Protocol (see Prebuilt_8916/Madt_4core_mppark.acpi)
+		 * 4 CPU cores. MpParkDxe powers up CPU1-3, parks them for the MP
+		 * Parking Protocol and puts only the cores that arrived in the MADT;
+		 * it leaves that same mask (bit n = CPUn) at 0x80300F00 for _STA.
 		 */
+		OperationRegion (MPPK, SystemMemory, 0x80300F00, 4)
+		Field (MPPK, DWordAcc, NoLock, Preserve)
+		{
+			CPUM, 32
+		}
+
 		Device(CPU0) 
 		{
 			Name(_HID, "ACPI0007")
@@ -16,19 +23,31 @@ DefinitionBlock("DSDT_ROSSA.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 		{
 			Name(_HID, "ACPI0007")
 			Name(_UID, 1)
-			Method(_STA, 0, NotSerialized) { Return (Zero) }
+			Method(_STA, 0, NotSerialized)
+			{
+				If (And (CPUM, 2)) { Return (0x0F) }
+				Return (Zero)
+			}
 		}
 		Device(CPU2) 
 		{
 			Name(_HID, "ACPI0007")
 			Name(_UID, 2)
-			Method(_STA, 0, NotSerialized) { Return (Zero) }
+			Method(_STA, 0, NotSerialized)
+			{
+				If (And (CPUM, 4)) { Return (0x0F) }
+				Return (Zero)
+			}
 		}
 		Device(CPU3) 
 		{
 			Name(_HID, "ACPI0007")
 			Name(_UID, 3)
-			Method(_STA, 0, NotSerialized) { Return (Zero) }
+			Method(_STA, 0, NotSerialized)
+			{
+				If (And (CPUM, 8)) { Return (0x0F) }
+				Return (Zero)
+			}
 		}
 	}
 

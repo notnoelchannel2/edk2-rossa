@@ -71,6 +71,18 @@ ShowCpu (
   Print (L"GIC   %u IRQs, GICD_IIDR %08x GICC_IIDR %08x\n",
          ((Typer & 0x1F) + 1) * 32, MmioRead32 (GicD + GICD_IIDR), MmioRead32 (GicC + GICC_IIDR));
   Print (L"RAM   %lu MB\n", PcdGet64 (PcdSystemMemorySize) >> 20);
+
+  /* MpParkDxe leaves the mask of parked cores at 0x80300F00 */
+  {
+    UINT32 Mask = MmioRead32 (0x80300F00);
+    UINTN  N    = 0;
+    UINTN  I;
+    for (I = 0; I < 4; I++) {
+      N += (Mask >> I) & 1;
+    }
+    Print (L"Cores %u of 4 online (mask 0x%x)%s\n", N, Mask,
+           N == 4 ? L"" : L" - others not started, see the firmware log");
+  }
 }
 
 STATIC VOID
