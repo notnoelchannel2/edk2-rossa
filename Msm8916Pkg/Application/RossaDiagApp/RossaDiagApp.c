@@ -249,6 +249,19 @@ Buzz (
   MmioWrite32 (MOTOR_TLMM_IN_OUT, 0);
 }
 
+/* What the OS will see on the SD slot (SDC2 SDHCI caps at 0x07864940/44) */
+STATIC VOID
+ShowSdCaps (
+  VOID
+  )
+{
+  UINT32 C0 = MmioRead32 (0x07864940);
+  UINT32 C1 = MmioRead32 (0x07864944);
+
+  Print (L"SD caps %08x/%08x: UHS %s, 1.8V %s (both must be off for Windows)\n", C0, C1,
+         (C1 & 0x7) ? L"ON" : L"off", (C0 & BIT26) ? L"ON" : L"off");
+}
+
 STATIC VOID
 ShowMotor (
   VOID
@@ -304,6 +317,7 @@ RossaDiagMain (
   ShowDisplay ();
   ShowTouch ();
   ShowBattery ();
+  ShowSdCaps ();
   ShowMotor ();
   ShowStorage ();
 

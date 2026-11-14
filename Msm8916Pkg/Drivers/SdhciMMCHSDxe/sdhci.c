@@ -33,6 +33,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 
 #include <Chipset/sdhci.h>
+#include <Platform/iomap.h>
 
 #include "sdhci_msm.h"
 // Must come in order
@@ -913,6 +914,27 @@ void sdhci_init(struct sdhci_host *host)
   uint32_t   version;
   UINTN      Index;
   EFI_STATUS Status;
+
+  /*
+   * SD card slot (SDC2): advertise no UHS-I (SDR50/SDR104/DDR50) and no
+   * 1.8 V, through the Qualcomm vendor capability override registers in the
+   * core block (Linux sdhci-msm: CORE_VENDOR_SPEC_CAPABILITIES0/1). The OS
+   * reads the capability registers too: Windows' generic sdbus would try
+   * the 1.8 V switch on UHS cards (any card over 2 GB), which needs the
+   * Qualcomm power-control IRQ handshake it can't do, and the card never
+   * comes up (INACCESSIBLE_BOOT_DEVICE on a 16 GB card, fine on 2 GB).
+   * This firmware only uses 3.3 V high speed on SD anyway.
+   */
+  if (host->msm_host->pwrctl_base == MSM_SDC2_BASE) {
+    uint32_t c0 = REG_READ32(host, SDHCI_CAPS_REG1);
+    uint32_t c1 = REG_READ32(host, SDHCI_CAPS_REG2);
+
+    writel(c0 & ~SDHCI_1_8_VOL_MASK, host->msm_host->pwrctl_base + SDCC_VENDOR_SPEC_CAPABILITIES0);
+    writel(c1 & ~(SDHCI_CAPS2_SDR50 | SDHCI_CAPS2_SDR104 | SDHCI_CAPS2_DDR50 | SDHCI_CAPS2_SDR50_TUNING),
+           host->msm_host->pwrctl_base + SDCC_VENDOR_SPEC_CAPABILITIES1);
+    DEBUG((EFI_D_WARN, "SDC2 caps 0x%08x/0x%08x -> 0x%08x/0x%08x (no UHS, no 1.8V)\n", c0, c1,
+           REG_READ32(host, SDHCI_CAPS_REG1), REG_READ32(host, SDHCI_CAPS_REG2)));
+  }
 
   /* Read the capabilities register & store the info */
   caps[0] = REG_READ32(host, SDHCI_CAPS_REG1);

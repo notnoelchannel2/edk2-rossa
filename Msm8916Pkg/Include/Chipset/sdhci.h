@@ -164,6 +164,14 @@ typedef enum {
 #define SDHCI_HOST_CTRL2_REG                      (0x03E)
 #define SDHCI_CAPS_REG1                           (0x040)
 #define SDHCI_CAPS_REG2                           (0x044)
+/* SDHCI capabilities register 2 (0x44) */
+#define SDHCI_CAPS2_SDR50                         BIT(0)
+#define SDHCI_CAPS2_SDR104                        BIT(1)
+#define SDHCI_CAPS2_DDR50                         BIT(2)
+#define SDHCI_CAPS2_SDR50_TUNING                  BIT(13)
+/* Qualcomm SDCC core (MCI) block: capability overrides (sdhci-msm v4) */
+#define SDCC_VENDOR_SPEC_CAPABILITIES0            (0x11C)
+#define SDCC_VENDOR_SPEC_CAPABILITIES1            (0x120)
 #define SDHCI_ADM_ERR_REG                         (0x054)
 #define SDHCI_ADM_ADDR_REG                        (0x058)
 
