@@ -13,6 +13,11 @@
  * EnableOtgVbus() does what Samsung's kernel does when an OTG cable shows up
  * (drivers/leds/sm5703_fled.c sm5703_boost_notification), but only when no
  * external VBUS (PC, charger) is present.
+ *
+ * rossa (PcdOtgBoostRt5033): the boost is in the RT5033 charger (I2C 0x34 on
+ * GPIO 22/23) and the MUIC is an SM5504 (same registers as the SM5703 MUIC).
+ * The boost is only turned on when the MUIC sees an OTG adapter (ID pin
+ * grounded, ADC 0x00) at boot and no charger/PC is powering the phone.
  */
 
 #include <PiDxe.h>
@@ -469,6 +474,87 @@ RouteMuicToUsb (
   DEBUG((EFI_D_ERROR, "UsbHost: MUIC routed USB lines to SoC: %r\n", Status));
 }
 
+/* RT5033: Linux rt5033_charger.c rt5033_charger_set_otg() */
+#define RT5033_CHG_STAT            0x00
+#define   RT5033_CHG_STAT_MASK     0x30   /* 0 = discharging: no external power */
+#define RT5033_CHG_CTRL1           0x01
+#define   RT5033_CTRL1_MODE_BOOST  0x01
+#define   RT5033_CTRL1_HZ          0x02
+#define RT5033_CHG_CTRL2           0x02
+#define   RT5033_CTRL2_CV_MASK     0xFC
+#define   RT5033_CTRL2_BOOST_5V    (0x37 << 2)
+#define MUIC_ADC_OTG               0x00   /* ID pin grounded */
+
+STATIC BOOLEAN
+MuicSeesOtgAdapter (
+  VOID
+  )
+{
+  GPIO_I2C_BUS Bus;
+  UINT8        Adc;
+
+  if (FixedPcdGet32(PcdMuicI2cSdaGpio) == GPIO_NONE) {
+    return FALSE;
+  }
+  Bus.SdaGpio      = FixedPcdGet32(PcdMuicI2cSdaGpio);
+  Bus.SclGpio      = FixedPcdGet32(PcdMuicI2cSclGpio);
+  Bus.HalfPeriodUs = 5;
+  GpioI2cInit(&Bus);
+  if (EFI_ERROR(I2cReadReg(&Bus, FixedPcdGet8(PcdMuicI2cAddress), MUIC_ADC, &Adc))) {
+    DEBUG((EFI_D_ERROR, "UsbHost: MUIC not responding\n"));
+    return FALSE;
+  }
+  DEBUG((EFI_D_ERROR, "UsbHost: MUIC ADC 0x%02x (%a)\n", Adc, (Adc & 0x1F) == MUIC_ADC_OTG ? "OTG adapter" : "no OTG adapter"));
+  return (Adc & 0x1F) == MUIC_ADC_OTG;
+}
+
+STATIC VOID
+EnableOtgVbusRt5033 (
+  VOID
+  )
+{
+  GPIO_I2C_BUS Bus;
+  UINT8        Addr = FixedPcdGet8(PcdOtgBoostI2cAddress);
+  UINT8        Stat;
+  EFI_STATUS   Status;
+
+  Bus.SdaGpio      = FixedPcdGet32(PcdOtgBoostI2cSdaGpio);
+  Bus.SclGpio      = FixedPcdGet32(PcdOtgBoostI2cSclGpio);
+  Bus.HalfPeriodUs = 5;
+  GpioI2cInit(&Bus);
+
+  Status = I2cReadReg(&Bus, Addr, RT5033_CHG_STAT, &Stat);
+  if (EFI_ERROR(Status)) {
+    DEBUG((EFI_D_ERROR, "UsbHost: RT5033 not responding: %r\n", Status));
+    return;
+  }
+  if (Stat & RT5033_CHG_STAT_MASK) {
+    DEBUG((EFI_D_ERROR, "UsbHost: external power present (stat %02x), OTG power stays off\n", Stat));
+    mExternalVbus = TRUE;
+    return;
+  }
+  if (!MuicSeesOtgAdapter()) {
+    DEBUG((EFI_D_ERROR, "UsbHost: plug the OTG adapter in before booting to get USB host power\n"));
+    return;
+  }
+
+  Status = I2cUpdateReg(&Bus, Addr, RT5033_CHG_CTRL1, RT5033_CTRL1_HZ, 0);
+  if (!EFI_ERROR(Status)) {
+    Status = I2cUpdateReg(&Bus, Addr, RT5033_CHG_CTRL2, RT5033_CTRL2_CV_MASK, RT5033_CTRL2_BOOST_5V);
+  }
+  if (!EFI_ERROR(Status)) {
+    Status = I2cUpdateReg(&Bus, Addr, RT5033_CHG_CTRL1, RT5033_CTRL1_MODE_BOOST, RT5033_CTRL1_MODE_BOOST);
+  }
+  if (EFI_ERROR(Status)) {
+    DEBUG((EFI_D_ERROR, "UsbHost: enabling RT5033 OTG boost failed: %r\n", Status));
+    return;
+  }
+  MicroSecondDelay(100000);
+  DEBUG((EFI_D_ERROR, "UsbHost: OTG power on (RT5033 boost, 5V)\n"));
+
+  RouteMuicToUsb();
+}
+
 STATIC VOID
 EnableOtgVbus (
   VOID
@@ -480,6 +566,10 @@ EnableOtgVbus (
   EFI_STATUS   Status;
 
   if (FixedPcdGet32(PcdOtgBoostI2cSdaGpio) == GPIO_NONE) {
+    return;
+  }
+  if (FixedPcdGetBool(PcdOtgBoostRt5033)) {
+    EnableOtgVbusRt5033();
     return;
   }
 

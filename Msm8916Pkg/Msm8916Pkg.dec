@@ -162,6 +162,8 @@
   gQcomTokenSpaceGuid.PcdMuicI2cSdaGpio|0xFFFFFFFF|UINT32|0x00000314
   gQcomTokenSpaceGuid.PcdMuicI2cSclGpio|0xFFFFFFFF|UINT32|0x00000315
   gQcomTokenSpaceGuid.PcdMuicI2cAddress|0x25|UINT8|0x00000316
+  # OTG boost is an RT5033 charger (rossa) instead of an SM5703 (J5)
+  gQcomTokenSpaceGuid.PcdOtgBoostRt5033|FALSE|BOOLEAN|0x00000318
 
   # Imagis touch: TRUE = expect the legacy IST30xx/IST3038 protocol (rossa),
   # FALSE = IST3038C protocol (J5 2016). The chip id is still probed first.

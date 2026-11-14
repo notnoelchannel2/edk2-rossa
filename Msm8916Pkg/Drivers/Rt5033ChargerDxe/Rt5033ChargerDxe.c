@@ -192,6 +192,18 @@ FgReadMv (
   return ((((UINT32)H << 4) | (L >> 4)) * 1250) / 1000;
 }
 
+/* UsbHostDxe may have switched the RT5033 to OTG boost for USB devices */
+STATIC
+BOOLEAN
+BoostActive (
+  VOID
+  )
+{
+  UINT8 Ctrl1;
+
+  return !EFI_ERROR(RegRead(&mChgBus, CHG_ADDR, CHG_CTRL1, &Ctrl1)) && (Ctrl1 & CTRL1_MODE_BOOST);
+}
+
 STATIC
 VOID
 ConfigureCharger (
@@ -199,6 +211,12 @@ ConfigureCharger (
   )
 {
   EFI_STATUS Status = EFI_SUCCESS;
+
+  if (BoostActive()) {
+    /* CTRL2's voltage field is the 5 V boost output now: leave both alone */
+    DEBUG((EFI_D_INFO, "RT5033: OTG boost on (USB host), charger settings left alone\n"));
+    return;
+  }
 
   /* Charger mode (not OTG boost), input limit, termination; leave HZ alone here */
   Status |= ChgUpdate(CHG_CTRL1, CTRL1_IAICR_MASK | CTRL1_TE_EN | CTRL1_MODE_BOOST,
@@ -260,7 +278,7 @@ MonitorTick (
 {
   UINT32 Mv;
 
-  if (mBootServicesDone || !mChargerFound || !mGaugeFound) {
+  if (mBootServicesDone || !mChargerFound || !mGaugeFound || BoostActive()) {
     return;
   }
 

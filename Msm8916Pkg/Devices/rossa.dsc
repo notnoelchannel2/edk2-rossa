@@ -78,6 +78,15 @@
   gQcomTokenSpaceGuid.PcdKeypadPowerPon|TRUE
 !endif
 
+  # USB host: RT5033 OTG boost (I2C 22/23 @0x34), SM5504 MUIC (I2C 2/3 @0x14)
+  gQcomTokenSpaceGuid.PcdOtgBoostI2cSdaGpio|22
+  gQcomTokenSpaceGuid.PcdOtgBoostI2cSclGpio|23
+  gQcomTokenSpaceGuid.PcdOtgBoostI2cAddress|0x34
+  gQcomTokenSpaceGuid.PcdOtgBoostRt5033|TRUE
+  gQcomTokenSpaceGuid.PcdMuicI2cSdaGpio|2
+  gQcomTokenSpaceGuid.PcdMuicI2cSclGpio|3
+  gQcomTokenSpaceGuid.PcdMuicI2cAddress|0x14
+
 [PcdsFeatureFlag.common]
   # MpParkDxe swaps the MADT through the ACPI SDT protocol
   gEfiMdeModulePkgTokenSpaceGuid.PcdInstallAcpiSdtProtocol|TRUE
@@ -94,5 +103,6 @@
   Msm8916Pkg/Drivers/Ist3038cTouchDxe/Ist3038cTouchDxe.inf
   Msm8916Pkg/Drivers/Rt5033ChargerDxe/Rt5033ChargerDxe.inf
   Msm8916Pkg/Drivers/MpParkDxe/MpParkDxe.inf
+  Msm8916Pkg/Drivers/UsbHostDxe/UsbHostDxe.inf
   Msm8916Pkg/Application/TouchTestApp/TouchTestApp.inf
   Msm8916Pkg/Application/RossaDiagApp/RossaDiagApp.inf

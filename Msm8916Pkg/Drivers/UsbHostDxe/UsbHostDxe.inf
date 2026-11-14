@@ -32,6 +32,7 @@
   gQcomTokenSpaceGuid.PcdMuicI2cSdaGpio
   gQcomTokenSpaceGuid.PcdMuicI2cSclGpio
   gQcomTokenSpaceGuid.PcdMuicI2cAddress
+  gQcomTokenSpaceGuid.PcdOtgBoostRt5033
 
 [Depex]
   TRUE

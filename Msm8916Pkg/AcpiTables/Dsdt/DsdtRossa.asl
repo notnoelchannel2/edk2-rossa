@@ -180,6 +180,66 @@ DefinitionBlock("DSDT_ROSSA.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 			Return (1)
 		}
 
+		/*
+		 * ChipIdea registers that an EHCI controller reset (HCRESET) clears
+		 * but host mode needs (Linux ci_hdrc_msm + UsbHostDxe). Operational
+		 * registers start at 0x140 (CAPLENGTH 0x40).
+		 */
+		OperationRegion (UREG, SystemMemory, 0x078D9000, 0x300)
+		Field (UREG, DWordAcc, NoLock, Preserve)
+		{
+			Offset (0x90),
+			SBUS, 32,	// SBUSCFG
+			Offset (0x98),
+			AHBM, 32,	// AHB_MODE
+			Offset (0xA0),
+			GCF2, 32,	// GENCONFIG_2
+			Offset (0x140),
+			UCMD, 32,	// USBCMD
+			Offset (0x184),
+			PSC0, 32,	// PORTSC (no LPM: PTS lives here)
+			Offset (0x1A8),
+			MDNL, 32,	// USBMODE (no LPM)
+			Offset (0x1C4),
+			DVLC, 32,	// DEVLC (LPM: PTS lives here)
+			Offset (0x208),
+			MDLP, 32	// USBMODE (LPM)
+		}
+
+		/*
+		 * Windows USB _DSM, function 1: called by usbehci after every
+		 * controller reset to put a dual-role controller back in host mode.
+		 */
+		Method (_DSM, 4, Serialized)
+		{
+			If (LEqual (Arg0, ToUUID ("ce2ee385-00e6-48cb-9f05-2edb927c4899")))
+			{
+				If (LEqual (Arg2, Zero))
+				{
+					Return (Buffer () { 0x03 })	// functions 0 and 1
+				}
+				If (LEqual (Arg2, One))
+				{
+					If (And (HCCP, 0x20000))
+					{
+						Store (Or (And (DVLC, 0x1FFFFFFF), 0x40000000), DVLC)	// ULPI PHY
+						Store (Or (And (MDLP, 0xFFFFFFFC), 0x03), MDLP)		// host
+					}
+					Else
+					{
+						Store (Or (And (PSC0, 0x3DFFFFFF), 0x80000000), PSC0)	// ULPI PHY
+						Store (Or (And (MDNL, 0xFFFFFFFC), 0x03), MDNL)		// host
+					}
+					Store (Zero, SBUS)
+					Store (0x08, AHBM)
+					Store (Or (GCF2, 0x80), GCF2)		// software session valid ...
+					Store (Or (UCMD, 0x02000000), UCMD)	// ... VBUS from the boost/MUIC
+					Return (Zero)
+				}
+			}
+			Return (Buffer () { 0x00 })
+		}
+
 		Name (_CRS, ResourceTemplate ()
 		{
 			Memory32Fixed (ReadWrite, 0x078D9100, 0x00000200)
@@ -232,6 +292,30 @@ DefinitionBlock("DSDT_ROSSA.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 			Memory32Fixed (ReadWrite, 0x01017000, 0x00001000)
 			Memory32Fixed (ReadWrite, 0x0100E000, 0x00001000)
 			Memory32Fixed (ReadWrite, 0x0100F000, 0x00001000)
+		})
+		Method (_STA, 0, NotSerialized)
+		{
+			Return (0x0F)
+		}
+	}
+
+	/*
+	 * Hardware keys + vibration motor (rossakeys.sys, rossa-winpe), in this
+	 * order: GPIO107 (Vol+), GPIO109 (Home), GPIO72 (motor enable), the
+	 * SPMI PMIC arbiter core (channel table) and its observer channels
+	 * (PM8916 PON: Power key and Vol- status).
+	 */
+	Device (KEYS)
+	{
+		Name (_HID, "RSKY0001")
+		Name (_UID, Zero)
+		Name (_CRS, ResourceTemplate ()
+		{
+			Memory32Fixed (ReadWrite, 0x0106B000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x0106D000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x01048000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x0200F000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x02C00000, 0x00800000)
 		})
 		Method (_STA, 0, NotSerialized)
 		{

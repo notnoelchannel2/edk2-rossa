@@ -210,8 +210,8 @@ APRIORI DXE {
   INF Msm8916Pkg/Drivers/GenericKeypadDeviceDxe/GenericKeypadDeviceDxe.inf
   INF Msm8916Pkg/Drivers/KeypadDxe/KeypadDxe.inf
 
-  # No UsbHostDxe: it drives the J5's SM5703 charger/MUIC. rossa has an
-  # RT5033 (OTG boost) and an SM5504 MUIC instead.
+  # USB host: RT5033 OTG boost + SM5504 MUIC (PcdOtgBoostRt5033)
+  INF Msm8916Pkg/Drivers/UsbHostDxe/UsbHostDxe.inf
 
   #
   # USB Host Support
