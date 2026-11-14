@@ -10,8 +10,8 @@
 image below (`--base 0x80000000 --kernel_offset 0x00080000 --pagesize 2048`).
 
 Status as of 14 Nov 2026, tested on an SM-G360F unless marked otherwise.
-"WinPE" means Windows PE 10 (ADK 2004, ARM64) from the SD card with the
-[rossa-winpe](https://github.com/notnoelchannel2/rossa-winpe) drivers.
+"WinPE" means Windows PE 10 (ADK 2004 / build 19041, ARM64) from the SD card
+with the [rossa-winpe](https://github.com/notnoelchannel2/rossa-winpe) drivers.
 
 ### Working
 
@@ -22,32 +22,30 @@ Status as of 14 Nov 2026, tested on an SM-G360F unless marked otherwise.
 | SD card (SDC2) | yes | yes | card detect GPIO 38; SDSC (<= 2 GB, byte-addressed) cards work; WinPE uses inbox `sdbus`/`sdstor` |
 | eMMC (SDC1) | yes, read-only | hidden | HS200; write-protected on purpose (Android/bootloader live there) |
 | Touchscreen (IST3038) | yes | yes | legacy IST30xx protocol; `rossatouch.sys` in WinPE |
+| On-screen keyboard | | yes | `rossaosk.exe` is the WinPE shell, docks under the command prompt, buzzes on taps |
 | Keys (Vol+/Vol-/Home/Power) | yes | yes | UEFI: Up/Down/Esc/Enter; WinPE (`rossakeys.sys`): Up/Down/Enter/Esc |
+| Vibration motor | yes (RossaDiag) | yes | GPIO72; `vibrate.exe <ms>`, key and keyboard buzz |
 | CPU cores | 4 | 4 parked | `MpParkDxe`: SCM cold-boot address + ACC power-up, cores parked for the ACPI MP Parking Protocol; MADT lists only cores that arrived. RossaDiag shows "Cores 4 of 4" |
 | Battery / charging | yes | yes | `Rt5033ChargerDxe` / `rossabatt.sys` (ACPI `RSBT0001`): CV 4.35 V, 500 mA input, over-voltage stop; %, voltage and charger state |
-| Reset / power off | yes | yes | PMIC PS_HOLD (no PSCI in Samsung's TrustZone) |
+| Reset / power off | yes | yes | PMIC PS_HOLD (no PSCI in Samsung's TrustZone); runtime MMIO mapped for the OS, so `wpeutil reboot` works |
 | Boot menu, RossaDiag, TouchTest | yes | | RossaDiag: CPU/GIC/PMIC/display/touch/battery/disks/cores/motor |
-| WinPE boot from SD | | yes | build 19041, `make-rossa-sd.cmd`; `\rossape\autorun.cmd` + `diag.txt` on the card |
+| WinPE boot from SD | | yes | `make-rossa-sd.cmd`; `\rossape\autorun.cmd` + `diag.txt` on the card |
 
-### Not working yet
+### Not working yet / untested
 
 | | Status |
 |---|---|
-| On-screen keyboard (`rossaosk.exe`) | Windows never starts it (installed as the WinPE shell, but runs zero instructions). `diag.txt` now records its exit code to find out why |
-| Vibration motor | `rossakeys.sys` drives GPIO72 like Samsung's driver, but nothing is felt in WinPE. RossaDiag has a motor test to tell hardware from driver |
-| Windows using 4 cores | firmware parks all 4; untested with `bcd.cmd smp` (the card still boots with `onecpu`) |
+| Full Windows 10 | `make-rossa-win10.cmd` (rossa-winpe) puts 22H2 or 1809 ARM64 on a 16 GB card; **not booted yet**. 1 GB of RAM: expect it to be slow |
+| Windows using 4 cores | firmware parks all 4; untested with `bcd.cmd smp` (cards still boot with `onecpu`) |
+| USB OTG host | written, **untested**: `UsbHostDxe` with RT5033 boost + SM5504 MUIC routing, DSDT `_DSM` restores host mode after Windows' EHCI reset. OTG adapter must be plugged in before booting |
 | Battery icon in WinPE | needs `battc.sys` in the image; readings work through `battstat` |
-| USB OTG host | written, **untested**: `UsbHostDxe` with RT5033 boost + SM5504 MUIC routing, DSDT `_DSM` restores host mode after Windows' EHCI reset. Plug the OTG adapter in before booting |
 
 ### To do
 
-- Fix rossaosk start-up (waiting on `diag.txt` exit code)
-- Find out why the motor doesn't run (RossaDiag motor test)
-- Test USB host (keyboard / USB stick through an OTG adapter)
-- Test Windows on all 4 cores
-- Hot-plug for USB OTG (now only detected at boot)
+- Boot full Windows 10 (stop codes / photos welcome)
+- Test Windows on all 4 cores (`bcd.cmd smp`)
+- Test USB host (keyboard / USB stick through an OTG adapter), then hot-plug
 - Screen brightness (backlight)
-- Full Windows 10 from a larger SD card (slow with 1 GB RAM)
 - Not planned: Wi-Fi (WCN3620) and audio (WCD9306/LPASS) need Qualcomm
   firmware loading and remote-processor drivers that don't exist for Windows
 
