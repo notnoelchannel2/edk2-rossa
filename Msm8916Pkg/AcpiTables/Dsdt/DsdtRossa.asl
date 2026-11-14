@@ -105,7 +105,11 @@ DefinitionBlock("DSDT_ROSSA.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 	Device (SDC2)
 	{
 		Name (_HID, "QCOM2466")
-		Name (_CID, "ACPI\QCOM2466")
+		/*
+		 * PNP0D40 = standard SD host controller: lets any Windows 10
+		 * version's inbox sdbus bind (older builds may not list QCOM2466).
+		 */
+		Name (_CID, Package () { "ACPI\QCOM2466", "PNP0D40" })
 		Name (_UID, 1)  // _UID: Unique ID
 		Name (_CCA, Zero)  // _CCA: Cache Coherency Attribute
 
