@@ -195,4 +195,28 @@ DefinitionBlock("DSDT_ROSSA.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 			Return (0x0F)
 		}
 	}
+
+	/*
+	 * RT5033 charger + fuel gauge (rossabatt.sys, rossa-winpe). Bit-banged
+	 * I2C on the TLMM GPIO pages listed here, in this order:
+	 * GPIO22 (charger SDA), GPIO23 (charger SCL), GPIO14 (gauge SDA),
+	 * GPIO15 (gauge SCL). Custom _HID so the ACPI battery driver
+	 * (cmbatt, PNP0C0A) does not bind.
+	 */
+	Device (BAT0)
+	{
+		Name (_HID, "RSBT0001")
+		Name (_UID, Zero)
+		Name (_CRS, ResourceTemplate ()
+		{
+			Memory32Fixed (ReadWrite, 0x01016000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x01017000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x0100E000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x0100F000, 0x00001000)
+		})
+		Method (_STA, 0, NotSerialized)
+		{
+			Return (0x0F)
+		}
+	}
 }
