@@ -933,9 +933,13 @@ void sdhci_init(struct sdhci_host *host)
     uint32_t c0 = REG_READ32(host, SDHCI_CAPS_REG1);
     uint32_t c1 = REG_READ32(host, SDHCI_CAPS_REG2);
 
-    writel(c0 & ~(SDHCI_1_8_VOL_MASK | SDHCI_CAPS_HIGH_SPEED), host->msm_host->pwrctl_base + SDCC_VENDOR_SPEC_CAPABILITIES0);
-    writel(c1 & ~(SDHCI_CAPS2_SDR50 | SDHCI_CAPS2_SDR104 | SDHCI_CAPS2_DDR50 | SDHCI_CAPS2_SDR50_TUNING),
-           host->msm_host->pwrctl_base + SDCC_VENDOR_SPEC_CAPABILITIES1);
+    /*
+     * On this core the override registers sit at SDHCI base + 0x11C/0x120
+     * (where sdhci_msm_init already adds 3.0 V), not in the MCI block.
+     */
+    REG_WRITE32(host, c0 & ~(SDHCI_1_8_VOL_MASK | SDHCI_CAPS_HIGH_SPEED), SDCC_VENDOR_SPEC_CAPABILITIES0);
+    REG_WRITE32(host, c1 & ~(SDHCI_CAPS2_SDR50 | SDHCI_CAPS2_SDR104 | SDHCI_CAPS2_DDR50 | SDHCI_CAPS2_SDR50_TUNING),
+                SDCC_VENDOR_SPEC_CAPABILITIES1);
     DEBUG((EFI_D_WARN, "SDC2 caps 0x%08x/0x%08x -> 0x%08x/0x%08x (no UHS, no 1.8V, no HS for the OS)\n", c0, c1,
            REG_READ32(host, SDHCI_CAPS_REG1), REG_READ32(host, SDHCI_CAPS_REG2)));
   }

@@ -264,9 +264,10 @@ ShowSdCaps (
   UINT32 Base = (C0 >> 8) & 0xFF;
   UINT32 Khz  = (Div == 0) ? Base * 1000 : (Base * 1000) / (2 * Div);
 
-  Print (L"SD caps %08x/%08x: HS %s, 1.8V %s (UHS bits %s, ignored)\n", C0, C1,
+  Print (L"SD caps %08x/%08x: HS %s (must be off), 1.8V %s, UHS %s\n", C0, C1,
          (C0 & BIT21) ? L"ON" : L"off", (C0 & BIT26) ? L"ON" : L"off",
          (C1 & 0x7) ? L"on" : L"off");
+  Print (L"SD caps override %08x/%08x\n", MmioRead32 (0x07864A1C), MmioRead32 (0x07864A20));
   Print (L"SD firmware bus: %u kHz, %u-bit, HS %s, UHS mode %u\n", Khz,
          (Hc1 & BIT1) ? 4 : 1, (Hc1 & BIT2) ? L"on" : L"off", Hc2 & 0x7);
 }
