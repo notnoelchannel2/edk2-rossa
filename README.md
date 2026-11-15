@@ -25,7 +25,7 @@ with the [rossa-winpe](https://github.com/notnoelchannel2/rossa-winpe) drivers.
 | On-screen keyboard | | yes | `rossaosk.exe` is the WinPE shell, docks under the command prompt, buzzes on taps |
 | Keys (Vol+/Vol-/Home/Power) | yes | yes | UEFI: Up/Down/Esc/Enter; WinPE (`rossakeys.sys`): Up/Down/Enter/Esc |
 | Vibration motor | yes (RossaDiag) | yes | GPIO72; `vibrate.exe <ms>`, key and keyboard buzz |
-| CPU cores | 4 | 4 parked | `MpParkDxe`: SCM cold-boot address + ACC power-up, cores parked for the ACPI MP Parking Protocol; MADT lists only cores that arrived. RossaDiag shows "Cores 4 of 4" |
+| CPU cores | 4 | 4 parked | `MpParkDxe`: SCM cold-boot address + ACC power-up, cores parked for the ACPI MP Parking Protocol; MADT lists only cores that arrived. RossaDiag shows "Cores 4 of 4"; WinPE runs on all 4 (`bcd.cmd smp`) |
 | Battery / charging | yes | yes | `Rt5033ChargerDxe` / `rossabatt.sys` (ACPI `RSBT0001`): CV 4.35 V, 500 mA input, over-voltage stop; %, voltage and charger state |
 | Reset / power off | yes | yes | PMIC PS_HOLD (no PSCI in Samsung's TrustZone); runtime MMIO mapped for the OS, so `wpeutil reboot` works |
 | Boot menu, RossaDiag, TouchTest | yes | | RossaDiag: CPU/GIC/PMIC/display/touch/battery/disks/cores/motor |
@@ -36,14 +36,13 @@ with the [rossa-winpe](https://github.com/notnoelchannel2/rossa-winpe) drivers.
 | | Status |
 |---|---|
 | Full Windows 10 | `make-rossa-win10.cmd` (rossa-winpe) puts 22H2 or 1809 ARM64 on a 16 GB card; **not booted yet**. 1 GB of RAM: expect it to be slow |
-| Windows using 4 cores | firmware parks all 4; untested with `bcd.cmd smp` (cards still boot with `onecpu`) |
 | USB OTG host | written, **untested**: `UsbHostDxe` with RT5033 boost + SM5504 MUIC routing, DSDT `_DSM` restores host mode after Windows' EHCI reset. OTG adapter must be plugged in before booting |
 | Battery icon in WinPE | needs `battc.sys` in the image; readings work through `battstat` |
 
 ### To do
 
 - Boot full Windows 10 (stop codes / photos welcome)
-- Test Windows on all 4 cores (`bcd.cmd smp`)
+- Test full Windows 10 on all 4 cores (WinPE works)
 - Test USB host (keyboard / USB stick through an OTG adapter), then hot-plug
 - Screen brightness (backlight)
 - Not planned: Wi-Fi (WCN3620) and audio (WCD9306/LPASS) need Qualcomm
