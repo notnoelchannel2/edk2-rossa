@@ -35,16 +35,16 @@ with the [rossa-winpe](https://github.com/notnoelchannel2/rossa-winpe) drivers.
 
 | | Status |
 |---|---|
-| Full Windows 10 | `make-rossa-win10.cmd` (rossa-winpe) puts 22H2 or 1809 ARM64 on a 16 GB card; **not booted yet**. 1 GB of RAM: expect it to be slow |
+| Full Windows 10 | boots (1809 ARM64 from a 16 GB card, all 4 cores) with `make-rossa-win10.cmd`; SD runs at 25 MHz (high speed hidden from the OS). First-run setup still being sorted out; `rossabatt` left out for now (crashed with Windows' Charge Arbitration Driver, fixed in 1.0.1, untested) |
+| Screen brightness | written, **untested**: `rossabl.sys` (ACPI `RSBL0001`) sends the panel's DCS brightness command through the DSI command DMA; `brightness.exe 0-100 / up / down` |
 | USB OTG host | written, **untested**: `UsbHostDxe` with RT5033 boost + SM5504 MUIC routing, DSDT `_DSM` restores host mode after Windows' EHCI reset. OTG adapter must be plugged in before booting |
 | Battery icon in WinPE | needs `battc.sys` in the image; readings work through `battstat` |
 
 ### To do
 
-- Boot full Windows 10 (stop codes / photos welcome)
-- Test full Windows 10 on all 4 cores (WinPE works)
+- Finish first-run setup of full Windows 10; test rossabatt 1.0.1 there
 - Test USB host (keyboard / USB stick through an OTG adapter), then hot-plug
-- Screen brightness (backlight)
+- Test screen brightness (`rossabl`)
 - Not planned: Wi-Fi (WCN3620) and audio (WCD9306/LPASS) need Qualcomm
   firmware loading and remote-processor drivers that don't exist for Windows
 

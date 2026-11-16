@@ -330,4 +330,23 @@ DefinitionBlock("DSDT_ROSSA.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 			Return (0x0F)
 		}
 	}
+
+	/*
+	 * Screen brightness: the panel dims itself on the MIPI DCS command 0x51,
+	 * so rossabl.sys only needs the DSI0 controller registers (it borrows
+	 * the command DMA engine while the firmware's video mode keeps running).
+	 */
+	Device (BKLT)
+	{
+		Name (_HID, "RSBL0001")
+		Name (_UID, Zero)
+		Name (_CRS, ResourceTemplate ()
+		{
+			Memory32Fixed (ReadWrite, 0x01A98000, 0x00000400)
+		})
+		Method (_STA, 0, NotSerialized)
+		{
+			Return (0x0F)
+		}
+	}
 }
