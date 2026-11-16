@@ -61,10 +61,13 @@ typedef struct {
  * The region table is per device. Select it with a compiler define set in
  * the device .dsc ([BuildOptions]); the J5 2015/2016 table is the default.
  *
- *   MSM8916_DEVICE_ROSSA   Samsung Galaxy Core Prime LTE (SM-G360F), 1 GB
+ *   MSM8916_DEVICE_ROSSA        Samsung Galaxy Core Prime LTE (SM-G360F), 1 GB
+ *   MSM8916_DEVICE_GPRIMELTEXX  Samsung Galaxy Grand Prime LTE (SM-G530FZ), 1 GB
  */
 #if defined(MSM8916_DEVICE_ROSSA)
 #include <Configuration/DeviceMemoryMapRossa.h>
+#elif defined(MSM8916_DEVICE_GPRIMELTEXX)
+#include <Configuration/DeviceMemoryMapGprimeltexx.h>
 #else
 static ARM_MEMORY_REGION_DESCRIPTOR_EX gDeviceMemoryDescriptorEx[] = {
     /* Name               Address     Length      HobOption        ResourceAttribute    ArmAttributes

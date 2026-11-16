@@ -162,6 +162,8 @@
   gQcomTokenSpaceGuid.PcdMuicI2cSdaGpio|0xFFFFFFFF|UINT32|0x00000314
   gQcomTokenSpaceGuid.PcdMuicI2cSclGpio|0xFFFFFFFF|UINT32|0x00000315
   gQcomTokenSpaceGuid.PcdMuicI2cAddress|0x25|UINT8|0x00000316
+  # MUIC MANUAL_SW2 value for USB host (OTG): SM5504/SM5703 0x02, SM5502 0x00
+  gQcomTokenSpaceGuid.PcdMuicManualSw2Otg|0x02|UINT8|0x00000319
   # OTG boost is an RT5033 charger (rossa) instead of an SM5703 (J5)
   gQcomTokenSpaceGuid.PcdOtgBoostRt5033|FALSE|BOOLEAN|0x00000318
 

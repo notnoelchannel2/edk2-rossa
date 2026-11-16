@@ -132,7 +132,7 @@ ShowTouch (
   EFI_ABSOLUTE_POINTER_PROTOCOL *Touch;
 
   if (EFI_ERROR (gBS->LocateProtocol (&gEfiAbsolutePointerProtocolGuid, NULL, (VOID **)&Touch))) {
-    Print (L"Touch not found (no answer from the IST3038?)\n");
+    Print (L"Touch not found (no answer from the touch controller?)\n");
     return;
   }
 

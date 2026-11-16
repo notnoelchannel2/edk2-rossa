@@ -1,0 +1,343 @@
+/* DSDT for the Samsung Galaxy Grand Prime LTE (gprimeltexx), derived from DsdtRossa.asl.
+ * Same RT5033 battery, keys/motor, SD and USB wiring as rossa; Zinitix touch; no DCS backlight. */
+DefinitionBlock("DSDT_GPRIMELTEXX.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
+{
+	/* CPU */
+	Scope(\_SB_)
+	{
+		/*
+		 * 4 CPU cores. MpParkDxe powers up CPU1-3, parks them for the MP
+		 * Parking Protocol and puts only the cores that arrived in the MADT;
+		 * it leaves that same mask (bit n = CPUn) at 0x80305000 for _STA.
+		 */
+		OperationRegion (MPPK, SystemMemory, 0x80305000, 4)
+		Field (MPPK, DWordAcc, NoLock, Preserve)
+		{
+			CPUM, 32
+		}
+
+		Device(CPU0) 
+		{
+			Name(_HID, "ACPI0007")
+			Name(_UID, 0)
+		}
+		Device(CPU1) 
+		{
+			Name(_HID, "ACPI0007")
+			Name(_UID, 1)
+			Method(_STA, 0, NotSerialized)
+			{
+				If (And (CPUM, 2)) { Return (0x0F) }
+				Return (Zero)
+			}
+		}
+		Device(CPU2) 
+		{
+			Name(_HID, "ACPI0007")
+			Name(_UID, 2)
+			Method(_STA, 0, NotSerialized)
+			{
+				If (And (CPUM, 4)) { Return (0x0F) }
+				Return (Zero)
+			}
+		}
+		Device(CPU3) 
+		{
+			Name(_HID, "ACPI0007")
+			Name(_UID, 3)
+			Method(_STA, 0, NotSerialized)
+			{
+				If (And (CPUM, 8)) { Return (0x0F) }
+				Return (Zero)
+			}
+		}
+	}
+
+	/* EMMC */
+	Device (SDC1)
+	{
+		Name (_HID, "QCOM2466")
+		Name (_CID, "ACPI\QCOM2466")
+		Name (_UID, Zero)  // _UID: Unique ID
+		Name (_CCA, Zero)  // _CCA: Cache Coherency Attribute
+
+		Method (_CRS, 0, NotSerialized)  // _CRS: Current Resource Settings
+		{
+			Name (RBUF, ResourceTemplate ()
+			{
+				Memory32Fixed (ReadWrite,
+				0x07824900,	 // Address Base
+				0x00000200,	 // Address Length
+				)
+				Interrupt (ResourceConsumer, Level, ActiveHigh, Exclusive, ,, )
+				{
+					155,
+				}
+			})
+			Return (RBUF) /* \_SB_.SDC1._CRS.RBUF */
+		}
+
+		Device (EMMC)
+		{
+			Method (_ADR, 0, NotSerialized)  // _ADR: Address
+			{
+				Return (0x08)
+			}
+
+			Method (_RMV, 0, NotSerialized)  // _RMV: Removal Status
+			{
+				Return (Zero)
+			}
+		}
+
+		Method (_DIS, 0, NotSerialized)  // _DIS: Disable Device
+		{
+		}
+
+		/*
+		 * The eMMC holds the phone's Android/bootloader partitions: keep it
+		 * invisible to Windows (no sdbus, nothing for diskpart to touch).
+		 */
+		Method (_STA, 0, NotSerialized)  // _STA: Status
+		{
+			Return (Zero)
+		}
+	}
+
+	Device (SDC2)
+	{
+		/*
+		 * Own ID, no compatible IDs: only rossasd.inf (rossa-winpe) matches,
+		 * so Windows treats this controller as boot-critical and full
+		 * Windows can keep reading the SD card it booted from. With the
+		 * inbox ID (QCOM2466) Windows' own sdbus.inf won and isn't
+		 * boot-critical on desktop images -> INACCESSIBLE_BOOT_DEVICE.
+		 * rossasd.inf runs the inbox sdbus.sys with the same settings as
+		 * the inbox QCOM2466 entry (CompatType 10, FunctionBlockIndex 0).
+		 */
+		Name (_HID, "RSSD0001")
+		Name (_UID, 1)  // _UID: Unique ID
+		Name (_CCA, Zero)  // _CCA: Cache Coherency Attribute
+
+		Method (_CRS, 0, NotSerialized)  // _CRS: Current Resource Settings
+		{
+			Name (RBUF, ResourceTemplate ()
+			{
+				Memory32Fixed (ReadWrite,
+					0x07864900,	 // Address Base
+					0x00000200,	 // Address Length
+				)
+				Interrupt (ResourceConsumer, Level, ActiveHigh, Exclusive, ,, )
+				{
+					157,
+				}
+			})
+			Return (RBUF) /* \_SB_.SDC1._CRS.RBUF */
+		}
+
+		/*
+		 * The J5 wires SD card detect to GPIO 38, not to the SDHCI card
+		 * detect line, and Windows has no TLMM GPIO driver. Declaring the
+		 * card embedded (_RMV 0) makes sdbus probe it without card detect;
+		 * the card must be in place at boot.
+		 */
+		Device (SDMM)
+		{
+			Name (_ADR, Zero)  // slot 0, function 0
+			Method (_RMV, 0, NotSerialized)  // _RMV: Removal Status
+			{
+				Return (Zero)
+			}
+		}
+
+		Method (_DIS, 0, NotSerialized)  // _DIS: Disable Device
+		{
+		}
+
+		Method (_STA, 0, NotSerialized)  // _STA: Status
+		{
+			Return (0x0F)
+		}
+	}
+	/*
+	 * USB 2.0 OTG controller (ChipIdea, usb@78d9000) as a plain EHCI host.
+	 * UsbHostDxe brings up clocks/PHY and puts it in host mode before boot.
+	 * The EHCI register set starts at the capability registers (+0x100).
+	 */
+	Device (USB0)
+	{
+		Name (_HID, "QCOM0BB0")
+		Name (_CID, "PNP0D20")
+		Name (_UID, Zero)
+		Name (_CCA, Zero)
+
+		OperationRegion (UCAP, SystemMemory, 0x078D9108, 4)
+		Field (UCAP, DWordAcc, NoLock, Preserve)
+		{
+			HCCP, 32	// HCCPARAMS
+		}
+
+		/*
+		 * Integrated TT flavour for usbehci: 2 = speed in HOSTPC (ChipIdea
+		 * cores with LPM, HCCPARAMS bit 17), 1 = speed in PORTSC.
+		 */
+		Method (_HRV, 0, NotSerialized)
+		{
+			If (And (HCCP, 0x20000))
+			{
+				Return (2)
+			}
+			Return (1)
+		}
+
+		/*
+		 * ChipIdea registers that an EHCI controller reset (HCRESET) clears
+		 * but host mode needs (Linux ci_hdrc_msm + UsbHostDxe). Operational
+		 * registers start at 0x140 (CAPLENGTH 0x40).
+		 */
+		OperationRegion (UREG, SystemMemory, 0x078D9000, 0x300)
+		Field (UREG, DWordAcc, NoLock, Preserve)
+		{
+			Offset (0x90),
+			SBUS, 32,	// SBUSCFG
+			Offset (0x98),
+			AHBM, 32,	// AHB_MODE
+			Offset (0xA0),
+			GCF2, 32,	// GENCONFIG_2
+			Offset (0x140),
+			UCMD, 32,	// USBCMD
+			Offset (0x184),
+			PSC0, 32,	// PORTSC (no LPM: PTS lives here)
+			Offset (0x1A8),
+			MDNL, 32,	// USBMODE (no LPM)
+			Offset (0x1C4),
+			DVLC, 32,	// DEVLC (LPM: PTS lives here)
+			Offset (0x208),
+			MDLP, 32	// USBMODE (LPM)
+		}
+
+		/*
+		 * Windows USB _DSM, function 1: called by usbehci after every
+		 * controller reset to put a dual-role controller back in host mode.
+		 */
+		Method (_DSM, 4, Serialized)
+		{
+			If (LEqual (Arg0, ToUUID ("ce2ee385-00e6-48cb-9f05-2edb927c4899")))
+			{
+				If (LEqual (Arg2, Zero))
+				{
+					Return (Buffer () { 0x03 })	// functions 0 and 1
+				}
+				If (LEqual (Arg2, One))
+				{
+					If (And (HCCP, 0x20000))
+					{
+						Store (Or (And (DVLC, 0x1FFFFFFF), 0x40000000), DVLC)	// ULPI PHY
+						Store (Or (And (MDLP, 0xFFFFFFFC), 0x03), MDLP)		// host
+					}
+					Else
+					{
+						Store (Or (And (PSC0, 0x3DFFFFFF), 0x80000000), PSC0)	// ULPI PHY
+						Store (Or (And (MDNL, 0xFFFFFFFC), 0x03), MDNL)		// host
+					}
+					Store (Zero, SBUS)
+					Store (0x08, AHBM)
+					Store (Or (GCF2, 0x80), GCF2)		// software session valid ...
+					Store (Or (UCMD, 0x02000000), UCMD)	// ... VBUS from the boost/MUIC
+					Return (Zero)
+				}
+			}
+			Return (Buffer () { 0x00 })
+		}
+
+		Name (_CRS, ResourceTemplate ()
+		{
+			Memory32Fixed (ReadWrite, 0x078D9100, 0x00000200)
+			Interrupt (ResourceConsumer, Level, ActiveHigh, Exclusive, ,, ) { 166 }
+		})
+
+		Method (_STA, 0, NotSerialized)
+		{
+			Return (0x0F)
+		}
+	}
+	/*
+	 * Zinitix BT541 touchscreen (Galaxy Grand Prime LTE, I2C address 0x20).
+	 * Windows has no I2C/GPIO controller drivers for this SoC, so a driver
+	 * has to bit-bang I2C on the TLMM GPIO pages listed here, in this order
+	 * (same pins as rossa's IST3038): GPIO13 (INT, active low), GPIO18 (SDA),
+	 * GPIO19 (SCL), GPIO73 (vdd_tsp_a enable). The firmware has already
+	 * powered and initialized the chip. No Windows driver exists yet
+	 * (rossatouch.sys speaks the Imagis protocol, not Zinitix).
+	 */
+	Device (TSC0)
+	{
+		Name (_HID, "GPTS0541")
+		Name (_UID, Zero)
+		Name (_CRS, ResourceTemplate ()
+		{
+			Memory32Fixed (ReadWrite, 0x0100D000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x01012000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x01013000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x01049000, 0x00001000)
+		})
+		Method (_STA, 0, NotSerialized)
+		{
+			Return (0x0F)
+		}
+	}
+
+	/*
+	 * RT5033 charger + fuel gauge (rossabatt.sys, rossa-winpe). Bit-banged
+	 * I2C on the TLMM GPIO pages listed here, in this order:
+	 * GPIO22 (charger SDA), GPIO23 (charger SCL), GPIO14 (gauge SDA),
+	 * GPIO15 (gauge SCL). Custom _HID so the ACPI battery driver
+	 * (cmbatt, PNP0C0A) does not bind.
+	 */
+	Device (BAT0)
+	{
+		Name (_HID, "RSBT0001")
+		Name (_UID, Zero)
+		Name (_CRS, ResourceTemplate ()
+		{
+			Memory32Fixed (ReadWrite, 0x01016000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x01017000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x0100E000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x0100F000, 0x00001000)
+		})
+		Method (_STA, 0, NotSerialized)
+		{
+			Return (0x0F)
+		}
+	}
+
+	/*
+	 * Hardware keys + vibration motor (rossakeys.sys, rossa-winpe), in this
+	 * order: GPIO107 (Vol+), GPIO109 (Home), GPIO72 (motor enable), the
+	 * SPMI PMIC arbiter core (channel table) and its observer channels
+	 * (PM8916 PON: Power key and Vol- status).
+	 */
+	Device (KEYS)
+	{
+		Name (_HID, "RSKY0001")
+		Name (_UID, Zero)
+		Name (_CRS, ResourceTemplate ()
+		{
+			Memory32Fixed (ReadWrite, 0x0106B000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x0106D000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x01048000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x0200F000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x02C00000, 0x00800000)
+		})
+		Method (_STA, 0, NotSerialized)
+		{
+			Return (0x0F)
+		}
+	}
+
+	/*
+	 * No RSBL0001 brightness device: the Grand Prime backlight is a PWM
+	 * (GCC GP2 clock on GPIO50, enable GPIO98), not the panel DCS 0x51
+	 * command rossabl.sys uses.
+	 */
+}

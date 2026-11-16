@@ -83,6 +83,31 @@ What differs from the J5 targets (all selected by `Devices/rossa.dsc`):
 - **Reset**: `Msm8916ResetSystemLib` sets the PMIC PS_HOLD action (hard reset
   or shutdown) and drops PS_HOLD, like Qualcomm's LK.
 
+## Galaxy Grand Prime LTE (gprimeltexx, SM-G530FZ) port
+
+Target `gprimeltexx` (`Devices/gprimeltexx.dsc`), built on the rossa port: the
+Grand Prime is the same board family ("fortuna"), so battery (RT5033), keys,
+vibration motor, SD card, USB host and the 4-core MpPark setup use rossa's code
+and GPIOs unchanged.
+
+| | Grand Prime LTE | vs. rossa |
+|---|---|---|
+| Display | 540x960 video mode (HX8389C / S6D78A0), 67x50 text console | 480x800 |
+| Touch | Zinitix BT541 @0x20 on GPIO 18/19, INT 13, VDD 73 (`Bt541TouchDxe`) | IST3038 @0x50, same pins |
+| Memory | 1 GB, Samsung TZ from 0x85500000 (`DeviceMemoryMapGprimeltexx.h`) | 0x85A00000 |
+| MUIC | SM5502 @0x25 (`PcdMuicManualSw2Otg` = 0x00) | SM5504 @0x14 |
+| Backlight | PWM (GP2 clock on GPIO 50), no `RSBL0001` in the DSDT | DCS 0x51 |
+| Windows touch | no driver yet (`GPTS0541` only reserves the pins) | `rossatouch.sys` |
+
+`rossabatt.sys` and `rossakeys.sys` should work as-is (same ACPI IDs and pins);
+untested on this phone.
+
+```bash
+./build.sh gprimeltexx RELEASE
+mkbootimg --kernel boot-gprimeltexx.img --base 0x80000000 --kernel_offset 0x00080000 --pagesize 2048 --cmdline "" -o uefi-gprimeltexx-androidboot.img
+fastboot boot uefi-gprimeltexx-androidboot.img     # from lk2nd (grandprimelte)
+```
+
 ## Status
 
 | | UEFI | Windows PE |

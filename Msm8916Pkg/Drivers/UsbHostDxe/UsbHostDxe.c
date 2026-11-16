@@ -90,7 +90,9 @@
 #define MUIC_MANUAL_SW1            0x13
 #define   MUIC_SW1_USB             0x25 /* D+/D- to the SoC USB PHY */
 #define MUIC_MANUAL_SW2            0x14
-#define   MUIC_SW2_OTG             0x02 /* disconnect MUIC_ID and ITBP */
+/* MANUAL_SW2 for OTG ("disconnect MUIC_ID and ITBP"): PcdMuicManualSw2Otg,
+ * 0x02 on the SM5504/SM5703, 0x00 on the SM5502 (Samsung sm5502_set_otg()) */
+#define   MUIC_SW2_OTG             FixedPcdGet8(PcdMuicManualSw2Otg)
 
 #define GCC_USB_HS_BCR             0x01841000
 #define GCC_USB2A_PHY_BCR          0x01841028

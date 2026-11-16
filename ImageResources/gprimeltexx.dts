@@ -1,0 +1,32 @@
+/dts-v1/;
+
+/*
+ * Minimal DTB appended to the UEFI image so lk2nd agrees to boot it.
+ * The UEFI itself does not parse it.
+ *
+ * Samsung encodes the board revision in the second board-id cell
+ * (downstream msm8916-sec-fortuna-eur-r00/r01/r02.dts use 0, 1, 2), so list
+ * every revision to match any Grand Prime LTE hardware revision.
+ */
+
+/ {
+	qcom,msm-id = <0xce 0x00>;
+	qcom,board-id = <0xce08ff01 0x00>, <0xce08ff01 0x01>, <0xce08ff01 0x02>,
+			<0xce08ff01 0x03>, <0xce08ff01 0x04>, <0xce08ff01 0x05>,
+			<0xce08ff01 0x06>, <0xce08ff01 0x07>, <0xce08ff01 0x08>,
+			<0xce08ff01 0x09>, <0xce08ff01 0x0a>, <0xce08ff01 0x0b>,
+			<0xce08ff01 0x0c>, <0xce08ff01 0x0d>, <0xce08ff01 0x0e>,
+			<0xce08ff01 0x0f>;
+	model = "Samsung Galaxy Grand Prime (SM-G530FZ)";
+	compatible = "samsung,grandprimelte", "samsung,gprimeltexx", "qcom,msm8916";
+	#address-cells = <0x02>;
+	#size-cells = <0x02>;
+
+	chosen {
+	};
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0x00 0x00 0x00 0x00>;
+	};
+};
