@@ -239,6 +239,8 @@ ZinitixRead (
     /* Separate write and read transactions, see the header comment */
     Status = GpioI2cTransfer(&Dev->Bus, Dev->Address, RegLe, sizeof(RegLe), NULL, 0);
     if (!EFI_ERROR(Status)) {
+      /* Linux zinitix_read_data(): DELAY_FOR_TRANSCATION between the two */
+      MicroSecondDelay(50);
       Status = GpioI2cTransfer(&Dev->Bus, Dev->Address, NULL, 0, Data, Len);
       if (!EFI_ERROR(Status)) {
         break;

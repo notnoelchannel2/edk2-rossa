@@ -742,6 +742,21 @@ uint32_t sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
   if (cmd->trans_mode == SDHCI_READ_MODE)
     ASSERT(IS_CACHE_LINE_ALIGNED(cmd->data.data_ptr));
 
+  /*
+   * Write out any dirty cache lines of a read buffer before the DMA starts.
+   * We run at EL1 under Qualcomm's hypervisor, where the "invalidate" after
+   * the transfer behaves as clean + invalidate: lines that are still dirty
+   * (DEBUG builds fill fresh pool memory with 0xAF) would then be written
+   * over the data the controller just put in RAM. That is how the eMMC's
+   * ExtCSD came back as AF AF AF.. and the capacity as 16 EB.
+   */
+  if (cmd->data_present && cmd->trans_mode == SDHCI_MMC_READ) {
+    arch_clean_invalidate_cache_range(
+        (addr_t)cmd->data.data_ptr,
+        (cmd->data.blk_sz) ? (cmd->data.num_blocks * cmd->data.blk_sz)
+                           : (cmd->data.num_blocks * SDHCI_MMC_BLK_SZ));
+  }
+
   do {
     present_state = REG_READ32(host, SDHCI_PRESENT_STATE_REG);
     /* check if CMD & DAT lines are free */

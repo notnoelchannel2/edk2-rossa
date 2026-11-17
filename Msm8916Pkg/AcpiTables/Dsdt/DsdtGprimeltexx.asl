@@ -336,6 +336,32 @@ DefinitionBlock("DSDT_GPRIMELTEXX.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 	}
 
 	/*
+	 * Motion / proximity sensors on the blsp_i2c2 pins (no Windows driver yet,
+	 * the node reserves the TLMM GPIO pages for a bit-banging one), in this
+	 * order: GPIO6 (SDA), GPIO7 (SCL), GPIO115 (accelerometer INT),
+	 * GPIO113 (proximity INT), GPIO8 (proximity enable).
+	 * 0x10 Bosch BMC150 accelerometer, 0x12 BMC150 magnetometer,
+	 * 0x44 Sharp GP2A proximity. Supplies PM8916 L17 + L5.
+	 */
+	Device (SNS0)
+	{
+		Name (_HID, "GPSN0150")
+		Name (_UID, Zero)
+		Name (_CRS, ResourceTemplate ()
+		{
+			Memory32Fixed (ReadWrite, 0x01006000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x01007000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x01073000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x01071000, 0x00001000)
+			Memory32Fixed (ReadWrite, 0x01008000, 0x00001000)
+		})
+		Method (_STA, 0, NotSerialized)
+		{
+			Return (0x0F)
+		}
+	}
+
+	/*
 	 * No RSBL0001 brightness device: the Grand Prime backlight is a PWM
 	 * (GCC GP2 clock on GPIO50, enable GPIO98), not the panel DCS 0x51
 	 * command rossabl.sys uses.

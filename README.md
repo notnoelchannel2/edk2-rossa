@@ -98,6 +98,7 @@ and GPIOs unchanged.
 | MUIC | SM5502 @0x25 (`PcdMuicManualSw2Otg` = 0x00) | SM5504 @0x14 |
 | Backlight | PWM (GP2 clock on GPIO 50), no `RSBL0001` in the DSDT | DCS 0x51 |
 | Windows touch | no driver yet (`GPTS0541` only reserves the pins) | `rossatouch.sys` |
+| Sensors | BMC150 accel @0x10 / magnetometer @0x12, GP2A proximity @0x44 on GPIO 6/7; probed by GprimeDiag, `GPSN0150` in the DSDT, no Windows driver yet | |
 
 `rossabatt.sys` and `rossakeys.sys` should work as-is (same ACPI IDs and pins);
 untested on this phone.

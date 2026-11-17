@@ -25,6 +25,9 @@
   PcdLib
   ArmLib
   ArmGenericTimerCounterLib
+  TimerLib
+  GpioTlmmLib
+  GpioI2cLib
 
 [Protocols]
   gEfiBlockIoProtocolGuid
@@ -39,3 +42,7 @@
   gArmTokenSpaceGuid.PcdSystemMemorySize
   gQcomTokenSpaceGuid.PcdSpmiBaseAddress
   gMsm8916PkgTokenSpaceGuid.PcdDeviceProduct
+  gQcomTokenSpaceGuid.PcdTouchI2cSdaGpio
+  gQcomTokenSpaceGuid.PcdTouchI2cSclGpio
+  gQcomTokenSpaceGuid.PcdTouchI2cAddress
+  gQcomTokenSpaceGuid.PcdTouchIntGpio

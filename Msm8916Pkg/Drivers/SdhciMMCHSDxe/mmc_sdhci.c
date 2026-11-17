@@ -634,7 +634,7 @@ static uint32_t mmc_get_ext_csd(struct sdhci_host *host, struct mmc_card *card)
 	ASSERT(card->ext_csd);
 
 	DEBUG ((EFI_D_INFO | EFI_D_LOAD, "memset0\n"));
-	memset(card->ext_csd, 0, sizeof(card->ext_csd));
+	memset(card->ext_csd, 0, 512);
 	DEBUG ((EFI_D_INFO | EFI_D_LOAD, "memset1\n"));
 	memset((struct mmc_command *)&cmd, 0, sizeof(struct mmc_command));
 

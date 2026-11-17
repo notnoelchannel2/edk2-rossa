@@ -751,7 +751,12 @@ VOID EFIAPI PlatformBootManagerAfterConsole(VOID)
   }
   if (FvFileExists(&mRossaDiagAppGuid)) {
     PlatformRegisterFvBootOption(
-        &mRossaDiagAppGuid, L"Diagnostics (RossaDiag)",
+        &mRossaDiagAppGuid,
+#ifdef MSM8916_DEVICE_GPRIMELTEXX
+        L"Diagnostics (GprimeDiag)",
+#else
+        L"Diagnostics (RossaDiag)",
+#endif
         LOAD_OPTION_ACTIVE | LOAD_OPTION_CATEGORY_APP);
   }
   if (FvFileExists(&mJ5DiagAppGuid)) {
