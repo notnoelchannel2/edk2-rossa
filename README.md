@@ -1,7 +1,4 @@
-# EDK2 for the Galaxy J5 2016 (j5xlte, SM-J510) (ts entierly slopped btw dont take too serious (Rest In Peace Rest In Peace Fish #29345823-#29347503 that died for this))
-
-<img width="875" height="713" alt="photo_2026-08-10_19-11-33" src="https://github.com/user-attachments/assets/98ab62c9-6815-4e60-8ef1-d5ecc39fab57" />
-
+# EDK2 for the Galaxy Core Prime (SM-G360F / rossa, coreprimeltexx) | done using claude.ai
 
 ## Galaxy Core Prime LTE (rossa, SM-G360F) port
 
@@ -83,70 +80,16 @@ What differs from the J5 targets (all selected by `Devices/rossa.dsc`):
 - **Reset**: `Msm8916ResetSystemLib` sets the PMIC PS_HOLD action (hard reset
   or shutdown) and drops PS_HOLD, like Qualcomm's LK.
 
-## Status
-
-| | UEFI | Windows PE |
-|---|---|---|
-| Display (framebuffer) | yes | yes |
-| SD card (SDC2) | yes | yes (inbox `sdbus`/`sdstor`) |
-| eMMC (SDC1) | read-only | hidden on purpose |
-| Touchscreen (IST3038C) | yes | yes ([j5touch](https://github.com/jimkoutso2008/j5touch)) |
-| CPU cores | 1 | 1 (no PSCI / MP parking yet) |
-| USB OTG host | no (WIP, `UsbHostDxe`) | no |
-
-**The eMMC is protected:** the firmware reports it read-only and refuses all writes
-(`EFI_WRITE_PROTECTED`), and the DSDT hides it from Windows (`SDC1._STA = 0`).
-It holds the phone's bootloader and Android partitions.
-
-## Building (WSL Debian)
-
-```bash
-sudo apt install build-essential uuid-dev iasl nasm python3 python-is-python3 gcc-aarch64-linux-gnu device-tree-compiler mkbootimg git
-```
-
-```bash
-git clone https://github.com/jimkoutso2008/edk2-msm8916-j5xlte && cd edk2-msm8916-j5xlte
-```
-
-```bash
-git submodule update --init --depth 1 edk2 edk2-platforms && git -C edk2 submodule update --init --depth 1
-```
-
-```bash
-mkdir -p workspace && (set --; . edk2/edksetup.sh && make -C edk2/BaseTools -j"$(nproc)")
-```
-
-```bash
-./build.sh j5xlte RELEASE
-```
-
-`build.sh [device] [DEBUG|RELEASE]` writes `boot-<device>.img` (gzip'd FD + DTB).
-Extra `build` flags go in `$BUILD_EXTRA` (e.g. `BUILD_EXTRA="-D USB_SELFTEST"`).
-Clone into the WSL filesystem (`~/...`), not `/mnt/c`.
-
-Wrap it as an Android boot image for lk2nd:
-
-```bash
-mkbootimg --kernel boot-j5xlte.img --base 0x80000000 --kernel_offset 0x00080000 --pagesize 2048 --cmdline "" -o uefi-j5xlte-androidboot.img
-```
-
-## Booting
+## Tutorial
 
 The stock Samsung bootloader won't boot it directly; use [lk2nd](https://github.com/msm8916-mainline/lk2nd)
 (23.1 tested) as a chain bootloader, then:
 
 ```bash
-fastboot boot uefi-j5xlte-androidboot.img
+fastboot boot uefi-rossa-androidboot.img
 ```
 
-or `fastboot flash boot uefi-j5xlte-androidboot.img` from lk2nd.
-
-### Windows PE from the SD card
-1. Copy the WinPE files (`efi\`, `boot\`, `sources\boot.wim`) to a FAT32 SD card.
-2. The BCD needs `testsigning on`, `nointegritychecks on` and `onecpu on`.
-   [`tools/bcd.cmd`](tools/bcd.cmd) shows, edits or recreates it (elevated cmd).
-3. Install [j5touch](https://github.com/jimkoutso2008/j5touch) and
-   [j5osk](https://github.com/jimkoutso2008/j5osk) into `boot.wim` for touch input.
+or `fastboot flash boot uefi-rossa-androidboot.img` from lk2nd.
 
 ## What changed vs. upstream
 
