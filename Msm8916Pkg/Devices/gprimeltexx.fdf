@@ -251,7 +251,7 @@ APRIORI DXE {
   #
   INF ShellPkg/Application/Shell/Shell.inf
   INF Msm8916Pkg/Application/TouchTestApp/TouchTestApp.inf
-  INF Msm8916Pkg/Application/RossaDiagApp/RossaDiagApp.inf
+  INF Msm8916Pkg/Application/GprimeDiagApp/GprimeDiagApp.inf
 !ifdef $(INCLUDE_TFTP_COMMAND)
   INF ShellPkg/DynamicCommand/TftpDynamicCommand/TftpDynamicCommand.inf
 !endif #$(INCLUDE_TFTP_COMMAND)

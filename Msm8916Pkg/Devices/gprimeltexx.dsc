@@ -24,7 +24,7 @@
   SKUID_IDENTIFIER               = DEFAULT
   FLASH_DEFINITION               = Msm8916Pkg/Devices/gprimeltexx.fdf
 
-  # DSDT with the Zinitix touch node and without rossa's DCS backlight device
+  # Grand Prime DSDT: Zinitix touch, sensors, GP* device IDs for the gprime-win10 drivers
   DEFINE ACPI_TABLES_INF         = Msm8916Pkg/AcpiTables/AcpiTablesGprimeltexx.inf
 
 !include Msm8916Pkg/Msm8916Pkg.dsc
@@ -111,4 +111,4 @@
   Msm8916Pkg/Drivers/MpParkDxe/MpParkDxe.inf
   Msm8916Pkg/Drivers/UsbHostDxe/UsbHostDxe.inf
   Msm8916Pkg/Application/TouchTestApp/TouchTestApp.inf
-  Msm8916Pkg/Application/RossaDiagApp/RossaDiagApp.inf
+  Msm8916Pkg/Application/GprimeDiagApp/GprimeDiagApp.inf

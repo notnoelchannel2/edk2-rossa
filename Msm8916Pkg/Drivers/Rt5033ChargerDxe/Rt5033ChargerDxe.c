@@ -1,5 +1,7 @@
 /*
- * Rt5033ChargerDxe - battery charger and fuel gauge for rossa (SM-G360F).
+ * Rt5033ChargerDxe - battery charger and fuel gauge for rossa (SM-G360F) and
+ * gprimeltexx (SM-G530FZ): same RT5033 wiring on both. The limits below
+ * also fit the Grand Prime (mainline grandprimelte: CV 4.35 V, 1 A).
  *
  * Richtek RT5033 on two bit-banged I2C buses (from the Samsung rossa DT):
  *   charger     i2c-gpio SDA 22 / SCL 23, address 0x34

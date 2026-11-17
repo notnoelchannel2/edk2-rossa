@@ -1,0 +1,48 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = GprimeDiag
+  FILE_GUID                      = 61DA9359-75A5-45AF-8A1C-C6C2DFE66012
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = GprimeDiagMain
+
+[Sources]
+  GprimeDiagApp.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  ArmPkg/ArmPkg.dec
+  Msm8916Pkg/Msm8916Pkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  BaseLib
+  BaseMemoryLib
+  IoLib
+  MemoryAllocationLib
+  PcdLib
+  ArmLib
+  ArmGenericTimerCounterLib
+  TimerLib
+  GpioTlmmLib
+  GpioI2cLib
+
+[Protocols]
+  gEfiBlockIoProtocolGuid
+  gEfiGraphicsOutputProtocolGuid
+  gEfiAbsolutePointerProtocolGuid
+  gQcomPm8x41ProtocolGuid
+  gRt5033BatteryProtocolGuid
+
+[Pcd]
+  gArmTokenSpaceGuid.PcdGicDistributorBase
+  gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase
+  gArmTokenSpaceGuid.PcdSystemMemorySize
+  gQcomTokenSpaceGuid.PcdSpmiBaseAddress
+  gMsm8916PkgTokenSpaceGuid.PcdDeviceProduct
+  gQcomTokenSpaceGuid.PcdTouchI2cSdaGpio
+  gQcomTokenSpaceGuid.PcdTouchI2cSclGpio
+  gQcomTokenSpaceGuid.PcdTouchI2cAddress
+  gQcomTokenSpaceGuid.PcdTouchIntGpio

@@ -343,6 +343,8 @@ STATIC CONST EFI_GUID mJ5DiagAppGuid =
   { 0x4D1F7A60, 0x2C3B, 0x4E85, { 0x9F, 0x14, 0x6B, 0x0A, 0x8E, 0x2D, 0x5C, 0x93 } };
 STATIC CONST EFI_GUID mRossaDiagAppGuid =
   { 0x2B6E9F31, 0x7C4A, 0x4D0B, { 0x8E, 0x52, 0x91, 0xA3, 0xF6, 0xD0, 0xC7, 0xE8 } };
+STATIC CONST EFI_GUID mGprimeDiagAppGuid =
+  { 0x61DA9359, 0x75A5, 0x45AF, { 0x8A, 0x1C, 0xC6, 0xC2, 0xDF, 0xE6, 0x60, 0x12 } };
 
 /* TRUE if FileGuid is in the firmware volume this driver was loaded from */
 STATIC
@@ -751,12 +753,12 @@ VOID EFIAPI PlatformBootManagerAfterConsole(VOID)
   }
   if (FvFileExists(&mRossaDiagAppGuid)) {
     PlatformRegisterFvBootOption(
-        &mRossaDiagAppGuid,
-#ifdef MSM8916_DEVICE_GPRIMELTEXX
-        L"Diagnostics (GprimeDiag)",
-#else
-        L"Diagnostics (RossaDiag)",
-#endif
+        &mRossaDiagAppGuid, L"Diagnostics (RossaDiag)",
+        LOAD_OPTION_ACTIVE | LOAD_OPTION_CATEGORY_APP);
+  }
+  if (FvFileExists(&mGprimeDiagAppGuid)) {
+    PlatformRegisterFvBootOption(
+        &mGprimeDiagAppGuid, L"Diagnostics (GprimeDiag)",
         LOAD_OPTION_ACTIVE | LOAD_OPTION_CATEGORY_APP);
   }
   if (FvFileExists(&mJ5DiagAppGuid)) {

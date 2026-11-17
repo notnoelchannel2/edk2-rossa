@@ -85,29 +85,51 @@ What differs from the J5 targets (all selected by `Devices/rossa.dsc`):
 
 ## Galaxy Grand Prime LTE (gprimeltexx, SM-G530FZ) port
 
-Target `gprimeltexx` (`Devices/gprimeltexx.dsc`), built on the rossa port: the
-Grand Prime is the same board family ("fortuna"), so battery (RT5033), keys,
-vibration motor, SD card, USB host and the 4-core MpPark setup use rossa's code
-and GPIOs unchanged.
+Target `gprimeltexx` (`Devices/gprimeltexx.dsc`). Started from the rossa port
+(same SoC and board family, "fortuna"); everything device specific is its own:
 
-| | Grand Prime LTE | vs. rossa |
-|---|---|---|
-| Display | 540x960 video mode (HX8389C / S6D78A0), 67x50 text console | 480x800 |
-| Touch | Zinitix BT541 @0x20 on GPIO 18/19, INT 13, VDD 73 (`Bt541TouchDxe`) | IST3038 @0x50, same pins |
-| Memory | 1 GB, Samsung TZ from 0x85500000 (`DeviceMemoryMapGprimeltexx.h`) | 0x85A00000 |
-| MUIC | SM5502 @0x25 (`PcdMuicManualSw2Otg` = 0x00) | SM5504 @0x14 |
-| Backlight | PWM (GP2 clock on GPIO 50), no `RSBL0001` in the DSDT | DCS 0x51 |
-| Windows touch | no driver yet (`GPTS0541` only reserves the pins) | `rossatouch.sys` |
-| Sensors | BMC150 accel @0x10 / magnetometer @0x12, GP2A proximity @0x44 on GPIO 6/7; probed by GprimeDiag, `GPSN0150` in the DSDT, no Windows driver yet | |
+| | Grand Prime LTE |
+|---|---|
+| Display | 540x960 video mode panel (HX8389C / S6D78A0), 67x50 text console |
+| Memory | 1 GB, Samsung TZ carve-out from 0x85500000 (`DeviceMemoryMapGprimeltexx.h`) |
+| Touch | Zinitix BT541 @0x20 on GPIO 18/19, INT 13, VDD 73 (`Bt541TouchDxe`) |
+| Keys | Vol+ GPIO 107, Home GPIO 109, Vol- / Power on the PM8916 PON |
+| Battery | EB-BG530CBE 2600 mAh on an RT5033 (charger 0x34 on GPIO 22/23, gauge 0x35 on GPIO 14/15), CV 4.35 V |
+| MUIC | SM5502 @0x25 (`PcdMuicManualSw2Otg` = 0x00) |
+| Sensors | BMC150 accel @0x10 / magnetometer @0x12, GP2A proximity @0x44 on GPIO 6/7 |
+| Diagnostics | `GprimeDiag` in the boot menu (`Application/GprimeDiagApp`) |
+| DSDT | `DsdtGprimeltexx.asl`, Windows device IDs `GPTS0541` touch, `GPKY0001` keys + motor, `GPBT0001` battery, `GPSD0001` SD boot, `GPSN0150` sensors |
 
-`rossabatt.sys` and `rossakeys.sys` should work as-is (same ACPI IDs and pins);
-untested on this phone.
+The Windows side (drivers `gprimetouch`, `gprimekeys`, `gprimebatt`,
+`gprimesd.inf`, the on-screen keyboard and the SD card scripts) is the
+**gprime-win10** kit; it binds only to the GP* IDs above.
 
 ```bash
 ./build.sh gprimeltexx RELEASE
 mkbootimg --kernel boot-gprimeltexx.img --base 0x80000000 --kernel_offset 0x00080000 --pagesize 2048 --cmdline "" -o uefi-gprimeltexx-androidboot.img
 fastboot boot uefi-gprimeltexx-androidboot.img     # from lk2nd (grandprimelte)
 ```
+
+### Grand Prime status
+
+"Seen working" = confirmed on a real SM-G530FZ. "Untested" = written and builds.
+
+| | UEFI | Windows |
+|---|---|---|
+| Boot, display 540x960 | seen working | seen working (boots) |
+| CPU cores | 4 of 4 started (seen) | 1 by default (`onecpu`); `bcd.cmd smp` for 4, untested |
+| microSD (SDC2) | seen working | `gprimesd.inf`, boots from SD |
+| eMMC (SDC1) | read-only, hidden from Windows; size fix untested | hidden on purpose |
+| Touch | `Bt541TouchDxe`, untested | `gprimetouch.sys`, untested (mouse in WinPE, touch screen in Windows 10) |
+| Keys | untested | `gprimekeys.sys`, untested |
+| Vibration motor | seen working | `gprimekeys.sys` / `vibrate.exe`, untested |
+| Battery / charging | readings seen; limits set by the firmware | `gprimebatt.sys` (needs `battc.sys`), untested, opt-in |
+| Sensors | probed by GprimeDiag, untested | no driver (pins reserved) |
+| USB host (OTG) | `UsbHostDxe` with SM5502 value, untested | inbox USB stack, untested |
+| Wi-Fi, Bluetooth, GPS, modem | no | no |
+| Audio, cameras, NFC | no | no |
+| Brightness, GPU acceleration | no (fixed brightness, framebuffer only) | no (basic display) |
+| Sleep / suspend | no | no |
 
 ## Status
 

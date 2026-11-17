@@ -1,5 +1,8 @@
-/* DSDT for the Samsung Galaxy Grand Prime LTE (gprimeltexx), derived from DsdtRossa.asl.
- * Same RT5033 battery, keys/motor, SD and USB wiring as rossa; Zinitix touch; no DCS backlight. */
+/* DSDT for the Samsung Galaxy Grand Prime LTE (gprimeltexx, SM-G530FZ).
+ * Started from DsdtRossa.asl (same SoC and board family). The devices the
+ * Windows drivers bind to have Grand Prime IDs (GP*), so only the gprime-win10
+ * drivers match: gprimetouch (GPTS0541), gprimekeys (GPKY0001), gprimebatt
+ * (GPBT0001), gprimesd.inf (GPSD0001); GPSN0150 reserves the sensor pins. */
 DefinitionBlock("DSDT_GPRIMELTEXX.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 {
 	/* CPU */
@@ -107,15 +110,15 @@ DefinitionBlock("DSDT_GPRIMELTEXX.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 	Device (SDC2)
 	{
 		/*
-		 * Own ID, no compatible IDs: only rossasd.inf (rossa-winpe) matches,
+		 * Own ID, no compatible IDs: only gprimesd.inf (gprime-win10) matches,
 		 * so Windows treats this controller as boot-critical and full
 		 * Windows can keep reading the SD card it booted from. With the
 		 * inbox ID (QCOM2466) Windows' own sdbus.inf won and isn't
 		 * boot-critical on desktop images -> INACCESSIBLE_BOOT_DEVICE.
-		 * rossasd.inf runs the inbox sdbus.sys with the same settings as
+		 * gprimesd.inf runs the inbox sdbus.sys with the same settings as
 		 * the inbox QCOM2466 entry (CompatType 10, FunctionBlockIndex 0).
 		 */
-		Name (_HID, "RSSD0001")
+		Name (_HID, "GPSD0001")
 		Name (_UID, 1)  // _UID: Unique ID
 		Name (_CCA, Zero)  // _CCA: Cache Coherency Attribute
 
@@ -265,10 +268,8 @@ DefinitionBlock("DSDT_GPRIMELTEXX.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 	 * Zinitix BT541 touchscreen (Galaxy Grand Prime LTE, I2C address 0x20).
 	 * Windows has no I2C/GPIO controller drivers for this SoC, so a driver
 	 * has to bit-bang I2C on the TLMM GPIO pages listed here, in this order
-	 * (same pins as rossa's IST3038): GPIO13 (INT, active low), GPIO18 (SDA),
-	 * GPIO19 (SCL), GPIO73 (vdd_tsp_a enable). The firmware has already
-	 * powered and initialized the chip. No Windows driver exists yet
-	 * (rossatouch.sys speaks the Imagis protocol, not Zinitix).
+	 * GPIO13 (INT, active low), GPIO18 (SDA), GPIO19 (SCL), GPIO73
+	 * (vdd_tsp_a enable). Windows driver: gprimetouch.sys (gprime-win10).
 	 */
 	Device (TSC0)
 	{
@@ -288,7 +289,7 @@ DefinitionBlock("DSDT_GPRIMELTEXX.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 	}
 
 	/*
-	 * RT5033 charger + fuel gauge (rossabatt.sys, rossa-winpe). Bit-banged
+	 * RT5033 charger + fuel gauge (gprimebatt.sys, gprime-win10). Bit-banged
 	 * I2C on the TLMM GPIO pages listed here, in this order:
 	 * GPIO22 (charger SDA), GPIO23 (charger SCL), GPIO14 (gauge SDA),
 	 * GPIO15 (gauge SCL). Custom _HID so the ACPI battery driver
@@ -296,7 +297,7 @@ DefinitionBlock("DSDT_GPRIMELTEXX.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 	 */
 	Device (BAT0)
 	{
-		Name (_HID, "RSBT0001")
+		Name (_HID, "GPBT0001")
 		Name (_UID, Zero)
 		Name (_CRS, ResourceTemplate ()
 		{
@@ -312,14 +313,14 @@ DefinitionBlock("DSDT_GPRIMELTEXX.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 	}
 
 	/*
-	 * Hardware keys + vibration motor (rossakeys.sys, rossa-winpe), in this
+	 * Hardware keys + vibration motor (gprimekeys.sys, gprime-win10), in this
 	 * order: GPIO107 (Vol+), GPIO109 (Home), GPIO72 (motor enable), the
 	 * SPMI PMIC arbiter core (channel table) and its observer channels
 	 * (PM8916 PON: Power key and Vol- status).
 	 */
 	Device (KEYS)
 	{
-		Name (_HID, "RSKY0001")
+		Name (_HID, "GPKY0001")
 		Name (_UID, Zero)
 		Name (_CRS, ResourceTemplate ()
 		{
@@ -362,8 +363,7 @@ DefinitionBlock("DSDT_GPRIMELTEXX.AML", "DSDT", 0x02, "QCOMM ", "MSM8916 ", 3)
 	}
 
 	/*
-	 * No RSBL0001 brightness device: the Grand Prime backlight is a PWM
-	 * (GCC GP2 clock on GPIO50, enable GPIO98), not the panel DCS 0x51
-	 * command rossabl.sys uses.
+	 * No brightness device: the Grand Prime backlight is a PWM (GCC GP2
+	 * clock on GPIO50, enable GPIO98) and there is no Windows driver for it.
 	 */
 }
