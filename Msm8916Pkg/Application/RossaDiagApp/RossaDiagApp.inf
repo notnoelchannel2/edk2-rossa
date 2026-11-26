@@ -39,3 +39,6 @@
   gArmTokenSpaceGuid.PcdSystemMemorySize
   gQcomTokenSpaceGuid.PcdSpmiBaseAddress
   gMsm8916PkgTokenSpaceGuid.PcdDeviceProduct
+
+[FixedPcd]
+  gQcomTokenSpaceGuid.PcdMotorEnableGpio

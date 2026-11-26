@@ -1,5 +1,6 @@
 /*
- * RossaDiag: what the firmware sees on the Galaxy Core Prime LTE (rossa).
+ * RossaDiag: what the firmware sees on the Galaxy Core Prime LTE (rossa)
+ * and the Galaxy A3 2015 (a3ulte); board differences come from PCDs.
  *
  * Read-only and safe to run from the boot manager menu: it only reads
  * registers and protocols, then waits for keys so the output stays on
@@ -132,7 +133,7 @@ ShowTouch (
   EFI_ABSOLUTE_POINTER_PROTOCOL *Touch;
 
   if (EFI_ERROR (gBS->LocateProtocol (&gEfiAbsolutePointerProtocolGuid, NULL, (VOID **)&Touch))) {
-    Print (L"Touch not found (no answer from the IST3038?)\n");
+    Print (L"Touch not found (no answer from the touch controller?)\n");
     return;
   }
 
@@ -186,12 +187,12 @@ KeyName (
   switch (Key->ScanCode) {
     case SCAN_UP:   return L"Vol+ (Up)";
     case SCAN_DOWN: return L"Vol- (Down)";
-    case SCAN_ESC:  return L"Home (Esc)";
+    case SCAN_ESC:  return L"Home/Back (Esc)";
     default:        break;
   }
 
   if (Key->UnicodeChar == CHAR_CARRIAGE_RETURN) {
-    return L"Power (Enter)";
+    return L"Power/Recents (Enter)";
   }
 
   return L"other key";
@@ -231,16 +232,27 @@ KeyTest (
   }
 }
 
-/* Vibration motor: GPIO72 high = on (Samsung msm_vibrator.c, mainline regulator-haptic) */
-#define MOTOR_TLMM_CFG     0x01048000
-#define MOTOR_TLMM_IN_OUT  0x01048004
+/*
+ * Vibration motor: PcdMotorEnableGpio high = on. rossa: GPIO72 (Samsung
+ * msm_vibrator.c, mainline regulator-haptic). A3 2015: GPIO76 enables the
+ * haptic driver, whose PWM input (GPIO50) PlatformPeiLib holds high.
+ */
+#define MOTOR_GPIO         FixedPcdGet32 (PcdMotorEnableGpio)
+#define MOTOR_TLMM_CFG     (0x01000000 + MOTOR_GPIO * 0x1000)
+#define MOTOR_TLMM_IN_OUT  (MOTOR_TLMM_CFG + 4)
 
 STATIC VOID
 Buzz (
   IN UINTN  Ms
   )
 {
-  UINT32 Cfg = MmioRead32 (MOTOR_TLMM_CFG);
+  UINT32 Cfg;
+
+  if (MOTOR_GPIO == 0xFFFFFFFF) {
+    return;
+  }
+
+  Cfg = MmioRead32 (MOTOR_TLMM_CFG);
 
   /* GPIO function, no pull, output enable; keep drive strength */
   MmioWrite32 (MOTOR_TLMM_CFG, (Cfg & ~0x3Fu) | BIT9);
@@ -277,7 +289,11 @@ ShowMotor (
   VOID
   )
 {
-  Print (L"Motor GPIO72 cfg %08x, buzzing 500 ms...", MmioRead32 (MOTOR_TLMM_CFG));
+  if (MOTOR_GPIO == 0xFFFFFFFF) {
+    Print (L"Motor not configured\n");
+    return;
+  }
+  Print (L"Motor GPIO%u cfg %08x, buzzing 500 ms...", MOTOR_GPIO, MmioRead32 (MOTOR_TLMM_CFG));
   Buzz (500);
   Print (L" done (cfg now %08x)\n", MmioRead32 (MOTOR_TLMM_CFG));
 }

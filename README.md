@@ -1,5 +1,46 @@
 # EDK2 for the Galaxy Core Prime (SM-G360F / rossa, coreprimeltexx) | done using claude.ai
 
+## Galaxy A3 2015 (a3ulte / a3lte, SM-A300F / SM-A300FU) port — `a3ulte` branch
+
+`./build.sh a3ulte RELEASE` builds `boot-a3ulte.img` for the Galaxy A3 2015
+(MSM8916, 1 GB RAM, 540x960 Super AMOLED). Boot it from lk2nd the same way
+as rossa (`fastboot boot`, or wrap it with `--base 0x80000000
+--kernel_offset 0x00080000 --pagesize 2048`).
+
+**Status: builds, not tested on hardware yet.** It is the rossa port with
+the A3's hardware taken from mainline Linux (`msm8916-samsung-a3u-eur.dts`,
+`msm8916-samsung-a2015-common.dtsi`, msm8916-mainline 6.12.1; the 7.0 WIP
+tree has no relevant changes) and lk2nd (`msm8916-samsung.dts`). Everything
+not listed below is shared with rossa and expected to behave the same.
+
+| | A3 2015 | Source / notes |
+|---|---|---|
+| Display | 540x960, 32bpp at `0x8e000000` | S6E88A0-AMS452EF01, **video mode**, so PrePi's pipe re-pointing works as on rossa. The stock bootloader keeps the splash running (lk2nd has no panel node for the A3) |
+| Memory map | 1 GB, `DeviceMemoryMapA3ulte.h` | Samsung TZ carve-out `0x85500000+0xB00000` (same as J5), MPSS `0x86800000+0x5400000`, all inside the reserved `0x86700000-0x8D300000` |
+| Touchscreen | Zinitix BT541, new `ZinitixTouchDxe` | blsp_i2c5 bit-banged: SDA 18, SCL 19, addr `0x20`, INT 13, vdd_tsp_a enable 73. Power-on sequence, init and report format from Linux `zinitix.c` |
+| Keys | Vol+ 107, Home 109, Vol- RESIN, Power KPDPWR | same as rossa |
+| Capacitive keys | Recents = Enter, Back = Esc | ABOV MCU with the TC360 protocol (Linux `tm2-touchkey.c`), i2c-gpio SDA 16 / SCL 17, addr `0x20`, power GPIO 86 + LED GPIO 60. `-D NO_TOUCHKEYS` leaves them out |
+| Vibration | enable GPIO 76, PWM GPIO 50 | `PlatformPeiLib` holds the PWM input of the haptic driver at 100% so GPIO 76 alone switches the motor (diagnostics, `rossakeys.sys`) |
+| Battery / charging | RT5033 | same pins as rossa (charger 22/23 @`0x34`, gauge 14/15 @`0x35`); the driver's 4.35 V / 700 mA limits are below the A3's |
+| USB OTG host | RT5033 boost + **SM5502** MUIC | MUIC on i2c-gpio 105/106 @`0x25`, same registers as the SM5504/SM5703 |
+| SD card / eMMC | card detect GPIO 38 | same as rossa |
+| DSDT | `Dsdt/DsdtA3ulte.asl` → `DSDT_A3ULTE.AML` | touch is `A3TS0001` (no Windows driver yet), keys/motor `RSKY0001` and battery `RSBT0001` keep rossa's IDs and layout so `rossakeys.sys`/`rossabatt.sys` should work; no `BKLT` (the AMOLED panel has no DCS 0x51 brightness) |
+| DTB | `ImageResources/a3ulte.dts` | msm-id `0xce`, board-id `0xce08ff01` revisions 0-15 (lk2nd: A300F/FU = 1, A300YZ = 3) |
+
+Shared code changed on this branch (rossa and the J5 targets build and
+behave as before):
+
+- `PcdMotorEnableGpio` / `PcdMotorPwmGpio`: RossaDiag buzzes the configured
+  motor GPIO (rossa sets 72), `PlatformPeiLib` parks a PWM-driven motor.
+- `KeypadDeviceImplLib`: optional TC360 capacitive keys (`PcdTouchkey*`,
+  off by default).
+- The boot menu entry is now just "Diagnostics".
+
+First things to check on a real A3: the screen comes up (if it stays black,
+the bootloader left the splash on a pipe/mixer PrePi doesn't look at),
+RossaDiag shows the Zinitix touch and "Cores 4 of 4", and the touch
+orientation (`PcdTouchInvertX/Y` if it is mirrored).
+
 ## Galaxy Core Prime LTE (rossa, SM-G360F) port
 
 `./build.sh rossa RELEASE` builds `boot-rossa.img` for the Core Prime LTE

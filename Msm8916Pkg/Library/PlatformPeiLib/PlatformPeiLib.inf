@@ -34,9 +34,17 @@
 [LibraryClasses]
   DebugLib
   HobLib
+  IoLib
 
 [FixedPcd]
   gArmTokenSpaceGuid.PcdFvSize
+  gQcomTokenSpaceGuid.PcdGpioTlmmBaseAddress
+  gQcomTokenSpaceGuid.PcdGpioTlmmCtlOffset
+  gQcomTokenSpaceGuid.PcdGpioTlmmCtlElementSize
+  gQcomTokenSpaceGuid.PcdGpioTlmmIoOffset
+  gQcomTokenSpaceGuid.PcdGpioTlmmIoElementSize
+  gQcomTokenSpaceGuid.PcdMotorEnableGpio
+  gQcomTokenSpaceGuid.PcdMotorPwmGpio
 
 [Pcd]
   gArmTokenSpaceGuid.PcdFvBaseAddress

@@ -1,0 +1,38 @@
+/dts-v1/;
+
+/*
+ * Stub DTB appended to the UEFI image so that lk2nd (and the Samsung
+ * bootloader) accept it on the Galaxy A3 2015 (a3ulte / a3lte, SM-A300F,
+ * SM-A300FU, SM-A300YZ ...). Nothing in it is used by the firmware itself.
+ *
+ * lk2nd lists the A3 variants with board-id <0xCE08FF01 1> (A300F/FU) and
+ * <0xCE08FF01 3> (A300YZ); all revisions 0-15 are listed here so any
+ * production unit matches.
+ *
+ * board-id <0xCE08FF01 rev>: [31:24] platform 0xCE (MSM8916), [23:16] QC hw
+ * id 0x08 (MTP), [15:8] national code, [7:0] operator; second cell is the
+ * Samsung hardware revision.
+ */
+/ {
+	qcom,msm-id = <0xce 0x00>;
+	qcom,board-id = <0xce08ff01 0x00>, <0xce08ff01 0x01>,
+			<0xce08ff01 0x02>, <0xce08ff01 0x03>,
+			<0xce08ff01 0x04>, <0xce08ff01 0x05>,
+			<0xce08ff01 0x06>, <0xce08ff01 0x07>,
+			<0xce08ff01 0x08>, <0xce08ff01 0x09>,
+			<0xce08ff01 0x0a>, <0xce08ff01 0x0b>,
+			<0xce08ff01 0x0c>, <0xce08ff01 0x0d>,
+			<0xce08ff01 0x0e>, <0xce08ff01 0x0f>;
+	model = "Samsung Galaxy A3 (2015)";
+	compatible = "samsung,a3u-eur", "samsung,a3lte", "samsung,a3", "qcom,msm8916";
+	#address-cells = <0x02>;
+	#size-cells = <0x02>;
+
+	chosen {
+	};
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0x00 0x00 0x00 0x00>;
+	};
+};

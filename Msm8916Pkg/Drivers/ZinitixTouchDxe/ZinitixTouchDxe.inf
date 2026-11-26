@@ -1,0 +1,46 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = ZinitixTouchDxe
+  FILE_GUID                      = 8C31830F-4850-41FD-8D81-3DB4664C7071
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = ZinitixTouchDxeInitialize
+
+[Sources.common]
+  ZinitixTouchDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  ArmPkg/ArmPkg.dec
+  EmbeddedPkg/EmbeddedPkg.dec
+  Msm8916Pkg/Msm8916Pkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  DebugLib
+  TimerLib
+  GpioTlmmLib
+  GpioI2cLib
+
+[Protocols]
+  gEfiAbsolutePointerProtocolGuid
+  gEfiDevicePathProtocolGuid
+
+[FixedPcd]
+  gQcomTokenSpaceGuid.PcdTouchI2cSdaGpio
+  gQcomTokenSpaceGuid.PcdTouchI2cSclGpio
+  gQcomTokenSpaceGuid.PcdTouchI2cAddress
+  gQcomTokenSpaceGuid.PcdTouchIntGpio
+  gQcomTokenSpaceGuid.PcdTouchPowerEnableGpio
+  gQcomTokenSpaceGuid.PcdTouchMaxX
+  gQcomTokenSpaceGuid.PcdTouchMaxY
+  gQcomTokenSpaceGuid.PcdTouchInvertX
+  gQcomTokenSpaceGuid.PcdTouchInvertY
+  gQcomTokenSpaceGuid.PcdTouchSwapXY
+
+[Depex]
+  gQcomGpioTlmmProtocolGuid

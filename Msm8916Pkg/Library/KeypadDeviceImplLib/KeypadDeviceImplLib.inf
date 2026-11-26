@@ -20,9 +20,15 @@
   Pm8x41Lib
   TimerLib
   GpioTlmmLib
+  GpioI2cLib
 
 [FixedPcd]
   gQcomTokenSpaceGuid.PcdKeypadVolumeUpGpio
   gQcomTokenSpaceGuid.PcdKeypadHomeGpio
   gQcomTokenSpaceGuid.PcdKeypadVolumeDownResin
   gQcomTokenSpaceGuid.PcdKeypadPowerPon
+  gQcomTokenSpaceGuid.PcdTouchkeyI2cSdaGpio
+  gQcomTokenSpaceGuid.PcdTouchkeyI2cSclGpio
+  gQcomTokenSpaceGuid.PcdTouchkeyI2cAddress
+  gQcomTokenSpaceGuid.PcdTouchkeyPowerGpio
+  gQcomTokenSpaceGuid.PcdTouchkeyLedPowerGpio

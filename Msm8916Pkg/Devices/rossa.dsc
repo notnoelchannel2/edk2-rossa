@@ -69,6 +69,9 @@
 
   gQcomTokenSpaceGuid.PcdKeypadVolumeUpGpio|107
   gQcomTokenSpaceGuid.PcdKeypadHomeGpio|109
+
+  # Vibration motor: GPIO72 high = on (no PWM input)
+  gQcomTokenSpaceGuid.PcdMotorEnableGpio|72
 !ifdef NO_PMIC_KEYS
   # Test build: don't touch the PMIC bus (SPMI) for keys
   gQcomTokenSpaceGuid.PcdKeypadVolumeDownResin|FALSE

@@ -62,9 +62,12 @@ typedef struct {
  * the device .dsc ([BuildOptions]); the J5 2015/2016 table is the default.
  *
  *   MSM8916_DEVICE_ROSSA   Samsung Galaxy Core Prime LTE (SM-G360F), 1 GB
+ *   MSM8916_DEVICE_A3ULTE  Samsung Galaxy A3 2015 (SM-A300F/FU), 1 GB
  */
 #if defined(MSM8916_DEVICE_ROSSA)
 #include <Configuration/DeviceMemoryMapRossa.h>
+#elif defined(MSM8916_DEVICE_A3ULTE)
+#include <Configuration/DeviceMemoryMapA3ulte.h>
 #else
 static ARM_MEMORY_REGION_DESCRIPTOR_EX gDeviceMemoryDescriptorEx[] = {
     /* Name               Address     Length      HobOption        ResourceAttribute    ArmAttributes

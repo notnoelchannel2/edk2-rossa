@@ -175,6 +175,22 @@
   gQcomTokenSpaceGuid.PcdKeypadVolumeDownResin|FALSE|BOOLEAN|0x00000322
   gQcomTokenSpaceGuid.PcdKeypadPowerPon|FALSE|BOOLEAN|0x00000323
 
+  # Capacitive touch keys (Recents/Back) behind a TC360-compatible MCU on
+  # bit-banged GPIO I2C, e.g. Galaxy A3 2015 (0xFFFFFFFF = not present).
+  # Power: VCC enable GPIO, key LED/VDD enable GPIO.
+  gQcomTokenSpaceGuid.PcdTouchkeyI2cSdaGpio|0xFFFFFFFF|UINT32|0x00000324
+  gQcomTokenSpaceGuid.PcdTouchkeyI2cSclGpio|0xFFFFFFFF|UINT32|0x00000325
+  gQcomTokenSpaceGuid.PcdTouchkeyI2cAddress|0x20|UINT8|0x00000326
+  gQcomTokenSpaceGuid.PcdTouchkeyPowerGpio|0xFFFFFFFF|UINT32|0x00000327
+  gQcomTokenSpaceGuid.PcdTouchkeyLedPowerGpio|0xFFFFFFFF|UINT32|0x00000328
+
+  # Vibration motor. Enable GPIO: high = motor on (rossa GPIO72, A3 GPIO76).
+  # PWM GPIO: if set, it is driven high (100% duty) at boot so the enable
+  # GPIO alone switches the motor (A3: GPIO50 = GCC_GP2 PWM input of the
+  # haptic driver IC). 0xFFFFFFFF = not present.
+  gQcomTokenSpaceGuid.PcdMotorEnableGpio|0xFFFFFFFF|UINT32|0x00000330
+  gQcomTokenSpaceGuid.PcdMotorPwmGpio|0xFFFFFFFF|UINT32|0x00000331
+
 [PcdsFeatureFlag.common]
   # MMCHSDxe
   gQcomTokenSpaceGuid.PcdMmcAdmSupport|FALSE|BOOLEAN|0x00010001

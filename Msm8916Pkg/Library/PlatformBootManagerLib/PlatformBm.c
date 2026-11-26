@@ -751,7 +751,7 @@ VOID EFIAPI PlatformBootManagerAfterConsole(VOID)
   }
   if (FvFileExists(&mRossaDiagAppGuid)) {
     PlatformRegisterFvBootOption(
-        &mRossaDiagAppGuid, L"Diagnostics (RossaDiag)",
+        &mRossaDiagAppGuid, L"Diagnostics",
         LOAD_OPTION_ACTIVE | LOAD_OPTION_CATEGORY_APP);
   }
   if (FvFileExists(&mJ5DiagAppGuid)) {

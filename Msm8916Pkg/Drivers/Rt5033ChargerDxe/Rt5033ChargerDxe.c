@@ -5,6 +5,11 @@
  *   charger     i2c-gpio SDA 22 / SCL 23, address 0x34
  *   fuel gauge  i2c-gpio SDA 14 / SCL 15, address 0x35
  *
+ * The Galaxy A3 2015 (a3ulte) wires the RT5033 identically (blsp_i2c6 =
+ * GPIO 22/23 for the charger, blsp_i2c4 = GPIO 14/15 for the gauge, mainline
+ * msm8916-samsung-a2015-common.dtsi) and its limits (CV 4.35 V, 1 A) are
+ * above the values below, so the same driver is used there.
+ *
  * Without a driver the charger keeps whatever the bootloader left, which
  * on some boots is nothing useful. This driver sets conservative limits
  * (taken from the Samsung and mainline rossa DTs, then made more cautious)
